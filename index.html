@@ -273,7 +273,7 @@ function attachDefinitions(){
     el.addEventListener("contextmenu", e=>{ e.preventDefault(); showDef(id); });
   });
 }
-function applyChange(from,to,alsoStill=[]){
+function applyChange(from,to,alsoStill=[],stillLabel="UNCHANGED"){
   const a=derive(from),b=derive(to);
   drawBoard(to);
   CELLS.forEach(c=>{
@@ -284,7 +284,7 @@ function applyChange(from,to,alsoStill=[]){
       el.insertAdjacentHTML("beforeend",`<span class="chip ${dir}">${dir==="up"?"▲":"▼"}</span>`);
     } else if(alsoStill.includes(c.id)){
       el.classList.add("still","flash");
-      el.insertAdjacentHTML("beforeend",`<span class="chip still">UNCHANGED</span>`);
+      el.insertAdjacentHTML("beforeend",`<span class="chip still">${stillLabel}</span>`);
     }
   });
 }
@@ -310,6 +310,13 @@ const UNITS=[
 {name:"The board", steps:[
  {type:"concept",state:BASE,title:"Nine numbers describe a job.",
   body:"Four are entered by a person. Five are calculated from those, and each calculated cell shows its own formula under its name.<br><br><b>Dashed cells are calculated. Solid cells are entered.</b>"},
+
+ {type:"worked",state:BASE,after:BASE,
+  still:["fee","jtd","etc","inv"], stillLabel:"TYPED IN",
+  title:"Four of these are typed in. Five are worked out.",
+  setup:"Nobody types in a percentage or a profit. Those fall out of the others.<br><br>Watch which four a human actually enters.",
+  button:"Show me which",
+  reveal:"<b>FEE</b> comes from the contract. <b>JTD COST</b> comes off timesheets and invoices, money already gone. <b>ETC COST</b> is somebody's forecast of what is still left to spend. <b>INV</b> is what has been billed so far.<br><br>The five dashed ones are pure arithmetic from those.<br><br>One wrinkle worth holding on to: <b>only three of the four drive what the firm says it earned</b>, and they are FEE, JTD COST and ETC COST. INV is typed in too, but it sits completely outside that calculation. That is the next question."},
 
  {type:"choice",state:BASE,
   q:"Everything the firm reports as earned is built out of three entered numbers. Which three?",
@@ -346,6 +353,13 @@ const UNITS=[
   why:"<b>Nothing moved.</b> Not one cell.<br><br>Issuing the drawings changed no cost, so it changed no revenue. The board has nowhere to record that it happened.<br><br>This is why a job can feel finished and report as though it is not.",
   src:["formula"]},
 
+ {type:"worked",state:BASE,after:{...BASE,jtd:44000,etc:36000},
+  title:"Book some time, on plan, and follow it through.",
+  setup:"$4,000 of time gets booked to the job this week. It was planned work, so the forecast of what is left drops by the same $4,000.<br><br>Before you press: nothing has been delivered to the client. No drawing was issued. Only money moved.",
+  button:"Watch what happens",
+  reveal:"<b>JTD COST</b> went $40,000 to $44,000. <b>ETC COST</b> went $40,000 to $36,000.<br><br><b>EAC COST did not move.</b> Still $80,000, because the $4,000 just crossed from one side to the other. The job is not expected to cost any more than it was.<br><br>But the top of the division grew, so <b>% COMP goes 50.0% to 55.0%</b>, and <b>CLAIMED REVENUE goes $50,000 to $55,000</b>.<br><br>Revenue rose $5,000 while cost rose $4,000, so <b>JTD PROFIT went $10,000 to $11,000</b>.<br><br>That is the whole shape. Now the same move twice, and the two answers are opposite.",
+  src:["formula"]},
+
  {type:"choice",state:BASE,after:{...BASE,jtd:50000,etc:30000},
   q:"You book $10,000 of time this week. The work was planned, so ETC COST drops by the same $10,000.<br><br>Which way does JTD PROFIT go?",
   opts:["Up","Down","It does not move"],a:0,
@@ -362,6 +376,13 @@ const UNITS=[
 {name:"The forecast is the lever", steps:[
  {type:"concept",state:BASE,title:"One number here is not a fact.",
   body:"FEE is contracted. JTD COST is what was actually spent, down to the timesheet.<br><br><b>ETC COST is a forecast.</b> Somebody's estimate of what is still to come. On your projects, that somebody is you."},
+
+ {type:"worked",state:BASE,after:{...BASE,etc:10000}, still:["jtd"],
+  title:"Change only the forecast. Change nothing real.",
+  setup:"The job is going far better than expected. You decide only $10,000 of work is left, not $40,000.<br><br>You do not spend anything. You do not deliver anything. You do not tell the client. You change one number that lives in your own head.",
+  button:"Watch what happens",
+  reveal:"<b>JTD COST did not move.</b> $40,000 spent, before and after. Watch that cell; it is the one telling the truth.<br><br>EAC COST fell $80,000 to $50,000, so <b>% COMP jumped 50.0% to 80.0%</b> and <b>CLAIMED REVENUE went $50,000 to $80,000</b>. <b>JTD PROFIT went $10,000 to $40,000.</b><br><br><b>The firm just booked $30,000 of income because you revised an opinion.</b> Not this month's work. Income, on a keystroke.<br><br>Now predict the same lever in the other direction.",
+  src:["formula","frs"]},
 
  {type:"choice",state:BASE,after:{...BASE,etc:60000},
   q:"You conclude the job will take longer and raise ETC COST from $40,000 to $60,000. You touch nothing else.<br><br>Which way does CLAIMED REVENUE go?",
@@ -387,7 +408,7 @@ const UNITS=[
 ]}];
 
 /* ===================== engine ===================== */
-const BUILD="v2.2 · built 260803 0850 ET";
+const BUILD="v2.3 · built 260803 0905 ET";
 document.getElementById("ver").textContent="units 1–3 · "+BUILD;
 let U=0,S=0,answered=false;
 try{const sv=JSON.parse(localStorage.getItem("mp_v2")||"null");if(sv){U=sv.U;S=sv.S;}}catch(e){}
@@ -410,6 +431,17 @@ function render(){
     foot.innerHTML=`${backBtn()}<button class="btn" onclick="next()">Start</button>`;
     return;
   }
+
+  /* WORKED: the guided rung. Nothing is asked. The change happens, and every
+     number that moves is named. Added 260803 after Josh reported he was
+     "guessing at most of them and seeing how close I got" — every puzzle in
+     the build was cold, with no worked instance in front of it. */
+  if(step.type==="worked"){
+    panel.innerHTML=`<div class="kicker">Unit ${U+1} · worked example</div>
+      <h1>${step.title}</h1><div class="body">${step.setup}</div>`;
+    foot.innerHTML=`${backBtn()}<button class="btn" onclick="showWorked()">${step.button||"Watch what happens"}</button>`;
+    return;
+  }
   panel.innerHTML=`<div class="kicker">Unit ${U+1} · puzzle ${S} of ${UNITS[U].steps.length-1}</div>
     <div class="body">${step.q}</div>
     <div class="opts" id="opts">${step.type==="choice"
@@ -418,6 +450,15 @@ function render(){
     ? `<button class="btn" onclick="submitSel()">Submit</button>`
     : `<span class="hint">Choose one</span>`);
 }
+function showWorked(){
+  const step=UNITS[U].steps[S];
+  applyChange(step.state, step.after||step.state, step.still||[], step.stillLabel||"UNCHANGED");
+  document.getElementById("panel").insertAdjacentHTML("beforeend",
+    `<div class="body">${step.reveal}</div>`);
+  document.getElementById("foot").innerHTML =
+    `${backBtn()}<button class="btn" onclick="next()">Continue</button>`;
+}
+
 /* Back, asked for directly. Re-renders the step fresh so you can try it again
    rather than landing on your old answer. */
 function backBtn(){
