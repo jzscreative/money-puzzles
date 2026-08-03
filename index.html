@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Money Puzzles">
+<meta name="theme-color" content="#f4f6f9">
+<meta name="robots" content="noindex, nofollow">
+<title>Money Puzzles</title>
+<style>
+/* ---------------------------------------------------------------
+   v2. Rebuilt for iPhone. Light mode forced; does not follow the OS.
+   NO viewport-height units anywhere: iOS Safari changes vh when the
+   toolbar hides on scroll, which makes type jump mid-read.
+   --------------------------------------------------------------- */
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --calc:#eef3f9;
+  --line:#dbe3ec; --line2:#b9c6d6;
+  --ink:#0e151d; --dim:#5a6b7e;
+  --up:#15803d; --upbg:#e9f9ef; --upline:#7cc99a;
+  --down:#b91c1c; --downbg:#fdeeee; --downline:#e79a9a;
+  --hot:#a16207; --hotbg:#fdf6e3; --hotline:#dcbf72;
+  --acc:#1d4ed8; --accbg:#e8effd;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg);-webkit-text-size-adjust:100%}
+body{
+  min-height:100dvh; background:var(--bg); color:var(--ink);
+  font:400 15px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-variant-numeric:tabular-nums; touch-action:manipulation;
+  display:flex; flex-direction:column;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+/* ---------- top bar ---------- */
+#bar{
+  flex:0 0 auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
+  border-bottom:1px solid var(--line); background:var(--panel);
+  position:sticky; top:0; z-index:5;
+}
+.t{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);font-weight:650}
+.t.f{color:var(--line2);font-weight:400;font-size:9.5px;letter-spacing:.05em}
+#dots{display:flex;gap:4px}
+.dot{width:6px;height:6px;border-radius:99px;background:var(--line2)}
+.dot.on{background:var(--acc)} .dot.done{background:var(--up)}
+.reset{
+  margin-left:auto; background:none;border:1px solid var(--line);color:var(--dim);
+  font:inherit;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:7px 11px;border-radius:99px;cursor:pointer;min-height:44px;
+}
+.units{display:flex;gap:5px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.upill{
+  font-size:10px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
+  padding:4px 9px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);
+}
+.upill.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:650}
+.upill.done{border-color:var(--up);color:var(--up)}
+
+/* ---------- one layout at every width ---------- */
+#stage{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;padding:0 12px;width:100%}
+#left{flex:0 0 auto;width:100%;max-width:680px;padding:12px 0 10px}
+#right{
+  flex:0 1 auto;width:100%;max-width:680px;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  display:flex;flex-direction:column;padding:14px;gap:10px;margin-bottom:14px;
+  box-shadow:0 1px 2px rgba(16,25,40,.05);
+}
+
+/* ---------- board ---------- */
+#board{display:flex;flex-direction:column;gap:7px}
+.brow{display:flex;gap:7px;align-items:stretch}
+.cell{
+  flex:1 1 0;min-width:0;background:var(--panel);border:1px solid var(--line);
+  border-radius:9px;padding:7px 9px;position:relative;transition:.18s;
+}
+.cell.calc{background:var(--calc);border-style:dashed}
+.cell .k{font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);
+  font-weight:700;line-height:1.25}
+.cell .s{font-size:8.5px;color:var(--line2);line-height:1.25;margin-top:1px}
+.cell .v{font-size:clamp(15px,4.6vw,22px);font-weight:650;margin-top:3px;letter-spacing:-.015em;
+  white-space:nowrap}
+.op{display:flex;align-items:center;color:var(--line2);font-size:15px;flex:0 0 auto}
+.cell.sel{cursor:pointer}
+.cell.picked{border-color:var(--acc);background:var(--accbg);box-shadow:0 0 0 1px var(--acc) inset}
+.cell.up{border-color:var(--upline);background:var(--upbg)}
+.cell.down{border-color:var(--downline);background:var(--downbg)}
+.cell.still{border-color:var(--hotline);background:var(--hotbg)}
+.chip{position:absolute;top:-8px;right:6px;font-size:8.5px;font-weight:750;
+  padding:2px 7px;border-radius:99px;letter-spacing:.04em;color:#fff}
+.chip.up{background:var(--up)} .chip.down{background:var(--down)} .chip.still{background:var(--hot)}
+@keyframes flash{0%{transform:scale(1)}40%{transform:scale(1.03)}100%{transform:scale(1)}}
+.flash{animation:flash .4s ease}
+/* narrow screens: drop the + and = glyphs. The formula lives inside each
+   calculated cell anyway, so nothing is lost and ~40px of width is gained. */
+@media(max-width:560px){ .op{display:none} }
+
+/* ---------- panel ---------- */
+.kicker{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);font-weight:750}
+h1{font-size:18px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
+.body{font-size:15px;color:#31414f;line-height:1.5;max-width:64ch}
+.body b{color:var(--ink);font-weight:650}
+.scroll{display:flex;flex-direction:column;gap:9px}
+.opts{display:flex;flex-direction:column;gap:7px}
+.opt{
+  text-align:left;background:var(--panel);border:1px solid var(--line2);color:var(--ink);
+  padding:12px 14px;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;
+  min-height:48px;transition:.12s;
+}
+.opt.right{border-color:var(--up);background:var(--upbg);font-weight:650}
+.opt.wrong{border-color:var(--down);background:var(--downbg)}
+.opt:disabled{opacity:.55}
+#foot{flex:0 0 auto;border-top:1px solid var(--line);padding-top:11px;
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{
+  background:var(--acc);color:#fff;border:0;padding:13px 22px;border-radius:9px;
+  font:inherit;font-weight:650;font-size:15px;cursor:pointer;min-height:48px;
+}
+.verdict{font-size:12px;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+.verdict.y{color:var(--up)} .verdict.n{color:var(--down)}
+details.src{font-size:13px;color:var(--dim);border-top:1px solid var(--line);padding-top:9px}
+details.src summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
+  min-height:44px;padding:4px 0}
+details.src summary::-webkit-details-marker{display:none}
+details.src summary::after{content:"▸";color:var(--line2);font-size:11px}
+details.src[open] summary::after{content:"▾"}
+details.src p{margin-top:7px;line-height:1.5}
+.tag{display:inline-block;font-size:8.5px;font-weight:750;letter-spacing:.07em;
+  padding:3px 7px;border-radius:4px;flex:0 0 auto}
+.tag.c{background:var(--upbg);color:var(--up);border:1px solid var(--upline)}
+.tag.u{background:var(--hotbg);color:var(--hot);border:1px solid var(--hotline)}
+.hint{font-size:13px;color:var(--dim)}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <span class="t">Money Puzzles</span>
+  <span class="t f" id="ver"></span>
+  <div id="dots"></div>
+  <button class="reset" onclick="restart()">reset</button>
+  <div class="units" id="units"></div>
+</div>
+
+<div id="stage">
+  <div id="left"><div id="board"></div></div>
+  <div id="right">
+    <div class="scroll" id="panel"></div>
+    <div id="foot"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   THE BOARD. Nine cells, fixed positions, the real column names off the
+   monthly report. Four entered, five calculated, each calculated cell
+   carrying its own formula. There is no cell for work completed, and
+   that absence is lesson one.
+   All figures invented. This teaches ideas, not any real project.
+   ===================================================================== */
+const BASE = { fee:100000, jtd:40000, etc:40000, inv:30000 };
+function derive(s){
+  const eac=s.jtd+s.etc, pct=eac?s.jtd/eac:0, rev=pct*s.fee;
+  return {...s, eac, pct, rev, wip:rev-s.inv, profit:rev-s.jtd};
+}
+const money = n => (n<0?"−$":"$")+Math.round(Math.abs(n)).toLocaleString("en-US");
+const pctS  = n => (n*100).toFixed(1)+"%";
+
+const CELLS=[
+ {id:"fee",   k:"FEE",                                       f:s=>money(s.fee)},
+ {id:"jtd",   k:"JTD COST",                                  f:s=>money(s.jtd)},
+ {id:"etc",   k:"ETC COST",                                  f:s=>money(s.etc)},
+ {id:"eac",   k:"EAC COST",  sub:"JTD + ETC",                f:s=>money(s.eac),   calc:1},
+ {id:"pct",   k:"LIVE CALC % COMP", sub:"JTD ÷ EAC",         f:s=>pctS(s.pct),    calc:1},
+ {id:"rev",   k:"CLAIMED REVENUE",  sub:"% COMP × FEE",      f:s=>money(s.rev),   calc:1},
+ {id:"inv",   k:"INV",                                       f:s=>money(s.inv)},
+ {id:"wip",   k:"WIP",       sub:"REVENUE − INV",            f:s=>money(s.wip),   calc:1},
+ {id:"profit",k:"JTD PROFIT",sub:"REVENUE − JTD",            f:s=>money(s.profit),calc:1}
+];
+const CMAP=Object.fromEntries(CELLS.map(c=>[c.id,c]));
+
+function drawBoard(state,opts={}){
+  const s=derive(state);
+  const cell=id=>{const c=CMAP[id];return `<div class="cell${c.calc?' calc':''}" data-id="${id}">
+    <div class="k">${c.k}</div>${c.sub?`<div class="s">${c.sub}</div>`:''}
+    <div class="v">${c.f(s)}</div></div>`;};
+  document.getElementById("board").innerHTML=`
+    <div class="brow">${cell("fee")}</div>
+    <div class="brow">${cell("jtd")}<div class="op">+</div>${cell("etc")}<div class="op">=</div>${cell("eac")}</div>
+    <div class="brow">${cell("pct")}${cell("rev")}</div>
+    <div class="brow">${cell("inv")}${cell("wip")}${cell("profit")}</div>`;
+  if(opts.selectable){
+    document.querySelectorAll("#board .cell").forEach(el=>{
+      el.classList.add("sel");
+      el.onclick=()=>el.classList.toggle("picked");
+    });
+  }
+}
+function applyChange(from,to,alsoStill=[]){
+  const a=derive(from),b=derive(to);
+  drawBoard(to);
+  CELLS.forEach(c=>{
+    const el=document.querySelector(`[data-id="${c.id}"]`), d=b[c.id]-a[c.id];
+    if(Math.abs(d)>0.005){
+      const dir=d>0?"up":"down";
+      el.classList.add(dir,"flash");
+      el.insertAdjacentHTML("beforeend",`<span class="chip ${dir}">${dir==="up"?"▲":"▼"}</span>`);
+    } else if(alsoStill.includes(c.id)){
+      el.classList.add("still","flash");
+      el.insertAdjacentHTML("beforeend",`<span class="chip still">UNCHANGED</span>`);
+    }
+  });
+}
+
+/* =====================================================================
+   CONTENT. Every puzzle carries an explanation screen. That is the
+   accuracy mechanism, not decoration: the single most complained-about
+   flaw in Duolingo's chess course is that a puzzle cannot be reviewed.
+   Sources collapse to one line and open on tap.
+   ===================================================================== */
+const SRC={
+ formula:{t:"c",h:"The revenue formula · internal deck, slide 39",
+   s:"Stated on slide 39 of an official internal deck: revenue equals cost spent to date, divided by total cost expected by the end, multiplied by fee."},
+ frs:{t:"u",h:"Whether this holds workstage by workstage",
+   s:"NOT CONFIRMED. Under the accounting standard adopted across the firm in 2026, nobody in finance has confirmed whether the formula above still applies at the individual workstage level. A workstage is the sub-code within a job that hours and costs book to. Treat the shape as right and the fine print as open."},
+ names:{t:"c",h:"The nine column names · the real monthly report",
+   s:"These are the actual column names off the monthly report, not plainer substitutes. They are the words used in the room, which is why the board uses them."}
+};
+
+const UNITS=[
+{name:"The board", steps:[
+ {type:"concept",state:BASE,title:"Nine numbers describe a job.",
+  body:"Four are entered by a person. Five are calculated from those, and each calculated cell shows its own formula under its name.<br><br><b>Dashed cells are calculated. Solid cells are entered.</b>"},
+
+ {type:"choice",state:BASE,
+  q:"Everything the firm reports as earned is built out of three entered numbers. Which three?",
+  opts:["FEE, JTD COST, ETC COST","FEE, EAC COST, CLAIMED REVENUE",
+        "JTD COST, EAC COST, JTD PROFIT","FEE, LIVE CALC % COMP, INV"],
+  a:0,
+  why:"<b>FEE</b> is the agreed price. <b>JTD COST</b> is money already spent, job to date. <b>ETC COST</b> is money still expected to be spent, estimate to complete.<br><br>INV, what has been billed, is entered too, but it sits outside the earning calculation entirely.",
+  src:["names"]},
+
+ {type:"choice",state:BASE,
+  q:"Point at the cell that tells you how much of the work is finished.",
+  opts:["LIVE CALC % COMP","EAC COST","JTD PROFIT","There is no such cell"],
+  a:3,
+  why:"<b>There is no cell for work completed.</b> Its absence is the point of this whole thing.<br><br>The trap is LIVE CALC % COMP. It reads like progress and it is not. It is money spent divided by money expected. A job that has burned half its budget reads 50% whether the drawings are finished or barely started.",
+  src:["formula","frs"]},
+
+ {type:"choice",state:BASE,
+  q:"CLAIMED REVENUE reads $50,000 on a fee of $100,000. Where did that come from?",
+  opts:["Half the deliverables are complete","% COMP of 50.0% times the $100,000 fee",
+        "Half the fee has been invoiced","It was agreed with the client at the halfway point"],
+  a:1,
+  why:"$40,000 spent, divided by $80,000 expected, is <b>50.0%</b>. Times the $100,000 fee, and the firm reports <b>$50,000 earned</b>.<br><br>No human decided that. Nobody looked at the drawings.",
+  src:["formula","frs"]}
+]},
+
+{name:"Spending is the engine", steps:[
+ {type:"concept",state:BASE,title:"Revenue answers to money spent. Nothing else.",
+  body:"This is the idea everything hangs off, and the one that feels wrong at first.<br><br>Finishing something does not move a number. Spending does."},
+
+ {type:"select",state:BASE,after:BASE,
+  still:["fee","jtd","etc","eac","pct","rev","inv","wip","profit"],
+  q:"You issue the complete drawing set today. A major milestone, delivered.<br><br><b>Tap every cell that moves. If none do, tap nothing and submit anyway.</b>",
+  a:[],
+  why:"<b>Nothing moved.</b> Not one cell.<br><br>Issuing the drawings changed no cost, so it changed no revenue. The board has nowhere to record that it happened.<br><br>This is why a job can feel finished and report as though it is not.",
+  src:["formula"]},
+
+ {type:"choice",state:BASE,after:{...BASE,jtd:50000,etc:30000},
+  q:"You book $10,000 of time this week. The work was planned, so ETC COST drops by the same $10,000.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"],a:0,
+  why:"EAC COST stays at $80,000, because $10,000 moved from one side to the other. But JTD COST is now $50,000, so % COMP rises to <b>62.5%</b> and CLAIMED REVENUE to <b>$62,500</b>.<br><br>Revenue rose $12,500 while cost rose $10,000, so <b>JTD PROFIT rose to $12,500</b>. Spending on plan earns money.",
+  src:["formula","frs"]},
+
+ {type:"choice",state:BASE,after:{...BASE,jtd:50000,etc:40000},
+  q:"Same week, same $10,000 booked. But it was rework nobody planned, so ETC COST does <b>not</b> drop. Still $40,000 of work left.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"],a:1,
+  why:"EAC COST rises to <b>$90,000</b>. % COMP goes to 55.6%, so CLAIMED REVENUE is <b>$55,556</b>.<br><br>Revenue rose about $5,556 while cost rose $10,000, so <b>JTD PROFIT fell to about $5,556</b>.<br><br>Compare the two. <b>Identical cash out the door. Opposite result.</b> The only difference was what happened to a forecast.",
+  src:["formula","frs"]}
+]},
+
+{name:"The forecast is the lever", steps:[
+ {type:"concept",state:BASE,title:"One number here is not a fact.",
+  body:"FEE is contracted. JTD COST is what was actually spent, down to the timesheet.<br><br><b>ETC COST is a forecast.</b> Somebody's estimate of what is still to come. On your projects, that somebody is you."},
+
+ {type:"choice",state:BASE,after:{...BASE,etc:60000},
+  q:"You conclude the job will take longer and raise ETC COST from $40,000 to $60,000. You touch nothing else.<br><br>Which way does CLAIMED REVENUE go?",
+  opts:["Up","Down","It does not move, because no work changed"],a:1,
+  why:"EAC COST rises to $100,000, so % COMP falls from 50.0% to <b>40.0%</b> and CLAIMED REVENUE from $50,000 to <b>$40,000</b>.<br><br><b>The firm just un-earned $10,000</b>, in a month where nobody did anything differently.",
+  src:["formula","frs"]},
+
+ {type:"select",state:BASE,after:{...BASE,etc:60000},still:["jtd"],
+  q:"Same move. ETC COST goes from $40,000 to $60,000.<br><br><b>Tap every cell that moves.</b>",
+  a:["etc","eac","pct","rev","wip","profit"],
+  why:"Six cells move. <b>JTD COST does not</b>, and that is the cell to watch.<br><br>Money actually spent is unchanged. Work delivered is unchanged. The client is unchanged. Reported income fell $10,000 anyway.",
+  src:["formula","frs"]},
+
+ {type:"choice",state:{...BASE,etc:60000},after:{...BASE,etc:30000},
+  q:"A month later it goes better than feared. You cut ETC COST from $60,000 to $30,000.<br><br>What happens to CLAIMED REVENUE?",
+  opts:["It rises sharply, to about $57,000","It stays put, you cannot un-report a loss",
+        "It rises only next year, when the job closes"],a:0,
+  why:"% COMP jumps to <b>57.1%</b> and CLAIMED REVENUE to about <b>$57,100</b>. Up roughly $17,000 from last month, on a forecast revision alone.<br><br><b>The lever works both ways.</b> It is not a penalty box. It is a live wire.",
+  src:["formula","frs"]},
+
+ {type:"concept",state:BASE,title:"Now the part no puzzle can teach.",
+  body:"You have just seen that one number, which you set, moves reported income either way with no change in the work.<br><br>That is why it is the number auditors look at, and why shading it is a real decision rather than a technicality.<br><br>Nobody checks your forecast the way they check your timesheet. <b>There is no test at the end of this section, because the test happens every month.</b>"}
+]}];
+
+/* ===================== engine ===================== */
+const BUILD="v2.0 · built 260802 2356 ET";
+document.getElementById("ver").textContent="units 1–3 · "+BUILD;
+let U=0,S=0,answered=false;
+try{const sv=JSON.parse(localStorage.getItem("mp_v2")||"null");if(sv){U=sv.U;S=sv.S;}}catch(e){}
+const save=()=>{try{localStorage.setItem("mp_v2",JSON.stringify({U,S}));}catch(e){}};
+
+function chrome(){
+  document.getElementById("units").innerHTML=UNITS.map((u,i)=>
+    `<span class="upill ${i===U?'on':(i<U?'done':'')}">${i+1}. ${u.name}</span>`).join("");
+  document.getElementById("dots").innerHTML=UNITS[U].steps.map((_,i)=>
+    `<span class="dot ${i===S?'on':(i<S?'done':'')}"></span>`).join("");
+}
+function render(){
+  chrome(); answered=false;
+  const step=UNITS[U].steps[S], panel=document.getElementById("panel"), foot=document.getElementById("foot");
+  drawBoard(step.state,{selectable:step.type==="select"});
+  window.scrollTo(0,0);
+  if(step.type==="concept"){
+    panel.innerHTML=`<div class="kicker">Unit ${U+1} · ${UNITS[U].name}</div>
+      <h1>${step.title}</h1><div class="body">${step.body}</div>`;
+    foot.innerHTML=`<button class="btn" onclick="next()">Start</button>`;
+    return;
+  }
+  panel.innerHTML=`<div class="kicker">Unit ${U+1} · puzzle ${S} of ${UNITS[U].steps.length-1}</div>
+    <div class="body">${step.q}</div>
+    <div class="opts" id="opts">${step.type==="choice"
+      ? step.opts.map((o,i)=>`<button class="opt" onclick="pick(${i})">${o}</button>`).join("") : ""}</div>`;
+  foot.innerHTML = step.type==="select"
+    ? `<button class="btn" onclick="submitSel()">Submit</button><span class="hint">Tap cells on the board above</span>`
+    : `<span class="hint">Choose one</span>`;
+}
+function reveal(ok,step){
+  answered=true;
+  applyChange(step.state,step.after||step.state,step.still||[]);
+  const src=(step.src||[]).map(k=>{const s=SRC[k];
+    return `<details class="src"><summary><span class="tag ${s.t}">${s.t==="c"?"CONFIRMED":"NOT CONFIRMED"}</span>${s.h}</summary><p>${s.s}</p></details>`;}).join("");
+  document.getElementById("panel").insertAdjacentHTML("beforeend",
+    `<div class="verdict ${ok?'y':'n'}">${ok?"Correct":"Not quite"}</div>
+     <div class="body">${step.why}</div>${src}`);
+  const last = U===UNITS.length-1 && S===UNITS[U].steps.length-1;
+  document.getElementById("foot").innerHTML = last
+    ? `<button class="btn" onclick="restart()">Start again</button><span class="hint">End of units 1–3.</span>`
+    : `<button class="btn" onclick="next()">Continue</button>`;
+}
+function pick(i){
+  if(answered)return;
+  const step=UNITS[U].steps[S];
+  document.querySelectorAll("#opts .opt").forEach((b,j)=>{
+    b.disabled=true;
+    if(j===step.a)b.classList.add("right"); else if(j===i)b.classList.add("wrong");
+  });
+  reveal(i===step.a,step);
+}
+function submitSel(){
+  if(answered)return;
+  const step=UNITS[U].steps[S];
+  const got=[...document.querySelectorAll("#board .cell.picked")].map(e=>e.dataset.id).sort();
+  const want=[...step.a].sort();
+  reveal(got.length===want.length&&got.every((v,i)=>v===want[i]),step);
+}
+function next(){
+  S++;
+  if(S>=UNITS[U].steps.length){U++;S=0;}
+  if(U>=UNITS.length){U=UNITS.length-1;S=UNITS[U].steps.length-1;}
+  save();render();
+}
+function restart(){U=0;S=0;save();render();}
+render();
+</script>
+</body>
+</html>
