@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Money Puzzles">
@@ -11,505 +12,1403 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Money Puzzles</title>
 <style>
-/* ---------------------------------------------------------------
-   v2. Rebuilt for iPhone. Light mode forced; does not follow the OS.
-   NO viewport-height units anywhere: iOS Safari changes vh when the
-   toolbar hides on scroll, which makes type jump mid-read.
-   --------------------------------------------------------------- */
+/* LIGHT MODE IS FORCED. There is deliberately no prefers-color-scheme block.
+   ONE LAYOUT AT EVERY WIDTH. There is deliberately no width media query.
+   Sizes scale with clamp(); nothing ever rearranges, hides or reflows. */
 :root{
+  color-scheme:light only;
   --bg:#f4f6f9; --panel:#ffffff; --calc:#eef3f9;
-  --line:#dbe3ec; --line2:#b9c6d6;
-  --ink:#0e151d; --dim:#5a6b7e;
-  --up:#15803d; --upbg:#e9f9ef; --upline:#7cc99a;
-  --down:#b91c1c; --downbg:#fdeeee; --downline:#e79a9a;
-  --hot:#a16207; --hotbg:#fdf6e3; --hotline:#dcbf72;
+  /* --line and --rule are BORDER tokens. Never use either as a text colour. */
+  --line:#d7e0ea; --rule:#8b95a1; --cellline:#8a8f96;   /* --rule and --cellline
+     carry operable-component boundaries and are measured at 3.06:1 and 3.25:1
+     against the panel. --line is decorative dividers only. */
+  --ink:#0e151d; --body:#31414f; --dim:#4d5d70;
+  --up:#15803d; --upbg:#e9f9ef; --upline:#5e9975;
+  --down:#b91c1c; --downbg:#fdeeee; --downline:#b97b7b;
+  --hot:#a16207; --hotbg:#fdf6e3; --hotline:#a18b53;
   --acc:#1d4ed8; --accbg:#e8effd;
+  --dark:#16202b; --darkink:#eaf0f7; --darkdim:#a9bccf;
+  --judge:#0e151d;
+  --footh:74px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html{background:var(--bg);-webkit-text-size-adjust:100%}
-body{
-  min-height:100dvh; background:var(--bg); color:var(--ink);
+body{min-height:100dvh;background:var(--bg);color:var(--ink);
   font:400 15px/1.45 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif;
-  font-variant-numeric:tabular-nums; touch-action:manipulation;
-  display:flex; flex-direction:column;
-  padding-bottom:env(safe-area-inset-bottom);
-}
-/* ---------- top bar ---------- */
-#bar{
-  flex:0 0 auto; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
-  border-bottom:1px solid var(--line); background:var(--panel);
-  position:sticky; top:0; z-index:5;
-}
-.t{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);font-weight:650}
-.t.f{color:var(--line2);font-weight:400;font-size:9.5px;letter-spacing:.05em}
-#dots{display:flex;gap:4px}
-.dot{width:6px;height:6px;border-radius:99px;background:var(--line2)}
-.dot.on{background:var(--acc)} .dot.done{background:var(--up)}
-.reset{
-  margin-left:auto; background:none;border:1px solid var(--line);color:var(--dim);
-  font:inherit;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
-  padding:7px 11px;border-radius:99px;cursor:pointer;min-height:44px;
-}
-.units{display:flex;gap:5px;width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-.upill{
-  font-size:10px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;
-  padding:4px 9px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);
-}
-.upill.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:650}
-.upill.done{border-color:var(--up);color:var(--up)}
+  font-variant-numeric:tabular-nums;touch-action:manipulation}
+button{font:inherit}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#right.teach :focus-visible{outline-color:var(--darkink)}
 
-/* ---------- one layout at every width ---------- */
-#stage{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;padding:0 12px;width:100%}
-#left{flex:0 0 auto;width:100%;max-width:680px;padding:12px 0 10px}
-#right{
-  flex:0 1 auto;width:100%;max-width:680px;
-  background:var(--panel);border:1px solid var(--line);border-radius:12px;
-  display:flex;flex-direction:column;padding:14px;gap:10px;margin-bottom:14px;
-  box-shadow:0 1px 2px rgba(16,25,40,.05);
-}
+/* ---------- error banner ---------- */
+#err{display:none;background:var(--down);color:#fff;font-size:13.5px;
+  padding:calc(12px + env(safe-area-inset-top)) 14px 12px;
+  line-height:1.5;position:sticky;top:0;z-index:60}
+#err b{display:block;font-size:15px;margin-bottom:5px}
+#err ul{margin:6px 0 0 18px}
+
+/* ---------- top bar ---------- */
+#bar{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;
+  border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+.t{font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);font-weight:650}
+.t.f{font-weight:500;font-size:10px;letter-spacing:.03em;color:var(--dim);opacity:.85}
+.topbtn{margin-left:auto;background:none;border:1px solid var(--rule);color:var(--dim);
+  font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:650;
+  padding:8px 13px;border-radius:99px;cursor:pointer;min-height:44px}
+
+#stage{display:flex;flex-direction:column;align-items:center;width:100%;
+  padding:0 calc(12px + env(safe-area-inset-right)) 0 calc(12px + env(safe-area-inset-left));
+  padding-bottom:calc(var(--footh) + env(safe-area-inset-bottom) + 14px)}
+#left{width:100%;max-width:680px;padding:12px 0 4px}
+#right{width:100%;max-width:680px;border-radius:12px;display:flex;flex-direction:column;
+  padding:0;gap:0;margin:8px 0 14px;overflow:hidden;border:1px solid var(--line);
+  background:var(--panel);box-shadow:0 1px 2px rgba(16,25,40,.05)}
+
+/* ---------- page shape: TEACHING (dark) vs ASKING (white) ---------- */
+#right.teach{background:var(--dark);border-color:var(--dark)}
+#right.ask{border-left:5px solid var(--acc)}
+.band{padding:9px 14px;font-size:11px;font-weight:750;letter-spacing:.14em;text-transform:uppercase}
+.band.teach{background:rgba(255,255,255,.07);color:var(--darkdim)}
+.band.ask{background:var(--acc);color:#fff}
+#panel{padding:14px;display:flex;flex-direction:column;gap:10px}
+#right.teach #panel{color:var(--darkink)}
+#right.teach .body{color:var(--darkink)}
+#right.teach .body b{color:#fff}
+#right.teach h1{color:#fff}
+#right.teach .src{border-top-color:rgba(255,255,255,.18);color:var(--darkdim)}
+h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
+.body{font-size:15.5px;color:var(--body);line-height:1.55;max-width:64ch}
+.body b{color:var(--ink);font-weight:700}
+.stagen{font-size:11px;font-weight:750;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--darkdim)}
 
 /* ---------- board ---------- */
-#board{display:flex;flex-direction:column;gap:7px}
-.brow{display:flex;gap:7px;align-items:stretch}
-.cell{
-  flex:1 1 0;min-width:0;background:var(--panel);border:1px solid var(--line);
-  border-radius:9px;padding:7px 9px;position:relative;transition:.18s;
-}
+#board{display:flex;flex-direction:column;gap:6px}
+.jobname{font-size:11.5px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);padding:0 2px 5px}
+.brow{display:flex;gap:6px;align-items:stretch}
+.cell{flex:1 1 0;min-width:0;background:var(--panel);border:1.5px solid var(--cellline);
+  border-radius:9px;position:relative;transition:background .18s,border-color .18s}
 .cell.calc{background:var(--calc);border-style:dashed}
-.cell .k{font-size:8.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);
-  font-weight:700;line-height:1.25}
-.cell .s{font-size:8.5px;color:var(--line2);line-height:1.25;margin-top:1px}
-.cell .v{font-size:clamp(15px,4.6vw,22px);font-weight:650;margin-top:3px;letter-spacing:-.015em;
-  white-space:nowrap}
-.op{display:flex;align-items:center;color:var(--line2);font-size:15px;flex:0 0 auto}
-.cell.sel{cursor:pointer}
-.cell.picked{border-color:var(--acc);background:var(--accbg);box-shadow:0 0 0 1px var(--acc) inset}
+.cellhit{display:block;width:100%;text-align:left;background:none;border:0;cursor:pointer;
+  padding:7px 10px 8px 9px;border-radius:8px;color:inherit;min-height:58px}
+.cell.hasq .cellhit{padding-right:32px}
+.cellhit .k{display:block;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--dim);font-weight:750;line-height:1.2}
+.cellhit .s{display:block;font-size:11.5px;font-weight:650;color:var(--body);line-height:1.25;
+  margin-top:2px}
+.cellhit .v{display:block;font-size:clamp(14px,4.3vw,21px);font-weight:700;margin-top:4px;
+  letter-spacing:-.015em;white-space:nowrap;color:var(--ink)}
+.cellhit .v.mask{color:var(--dim);letter-spacing:.14em}
+.was{display:block;font-size:10.5px;color:var(--body);font-weight:650;margin-top:-2px;
+  padding:0 10px 8px 9px;line-height:1.3}
+.cell.hasq .was{padding-right:32px}
+.cellq{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:99px;
+  border:1.5px solid var(--rule);background:var(--panel);color:var(--dim);font-size:12px;
+  font-weight:750;cursor:pointer;line-height:1;display:flex;align-items:center;
+  justify-content:center;padding:0}
+.op{display:flex;align-items:center;justify-content:center;color:var(--body);
+  font-size:clamp(15px,4vw,19px);font-weight:650;flex:0 0 auto;padding:0 1px}
+
+/* channel 1 — HUE = direction the data moved */
 .cell.up{border-color:var(--upline);background:var(--upbg)}
 .cell.down{border-color:var(--downline);background:var(--downbg)}
 .cell.still{border-color:var(--hotline);background:var(--hotbg)}
-.chip{position:absolute;top:-8px;right:6px;font-size:8.5px;font-weight:750;
-  padding:2px 7px;border-radius:99px;letter-spacing:.04em;color:#fff}
+/* channel 2 — HEAVY BLACK BORDER = you chose this. Persists through the reveal. */
+.cell.chosen{border-color:var(--judge);border-width:3px;border-style:solid}
+/* channel 3 — ACHROMATIC BADGE = right, wrong, missed */
+.chip{position:absolute;top:-9px;right:6px;font-size:9px;font-weight:800;padding:3px 7px;
+  border-radius:99px;letter-spacing:.05em;color:#fff;white-space:nowrap}
 .chip.up{background:var(--up)} .chip.down{background:var(--down)} .chip.still{background:var(--hot)}
-@keyframes flash{0%{transform:scale(1)}40%{transform:scale(1.03)}100%{transform:scale(1)}}
+.badge{position:absolute;top:-9px;left:6px;font-size:9px;font-weight:800;padding:3px 7px;
+  border-radius:99px;letter-spacing:.05em;white-space:nowrap;
+  background:var(--judge);color:#fff;border:1.5px solid var(--judge)}
+.badge.missed{background:var(--panel);color:var(--judge);border-style:dashed}
+.badge.wrong{background:var(--panel);color:var(--judge)}
+.lphint{font-size:12px;color:var(--dim);text-align:center;margin-top:8px}
+@keyframes flash{0%{transform:scale(1)}40%{transform:scale(1.035)}100%{transform:scale(1)}}
 .flash{animation:flash .4s ease}
-/* ---------- phone: claw back vertical space ----------
-   An iPhone 15 in Chrome has roughly 620px of usable height, and Chrome keeps
-   both toolbars on screen permanently. Everything below is height, not width. */
-@media(max-width:560px){
-  /* the + and = glyphs go: each calculated cell already prints its own formula */
-  .op{display:none}
-  /* the unit pills go: the dots already show progress and the panel kicker
-     already names the unit. This removes an entire row from the header. */
-  .units{display:none}
-  /* tighter board */
-  #left{padding:8px 0 6px}
-  #board{gap:5px} .brow{gap:5px}
-  .cell{padding:5px 8px}
-  .cell .k{font-size:8px} .cell .s{font-size:8px}
-  .cell .v{font-size:clamp(14px,4.2vw,20px);margin-top:2px}
-  /* tighter panel */
-  #right{padding:12px;gap:8px;margin-bottom:10px}
-  .opt{min-height:46px;padding:10px 13px}
-  .opts{gap:6px}
-  #foot{padding-top:9px}
-  .body{font-size:14.5px}
-}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.fade{animation:fadein .28s ease}
+@media(prefers-reduced-motion:reduce){.flash,.fade{animation:none}}
 
-/* ---------- panel ---------- */
-.kicker{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--acc);font-weight:750}
-h1{font-size:18px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
-.body{font-size:15px;color:#31414f;line-height:1.5;max-width:64ch}
-.body b{color:var(--ink);font-weight:650}
-.scroll{display:flex;flex-direction:column;gap:9px}
-.opts{display:flex;flex-direction:column;gap:7px}
-.opt{
-  text-align:left;background:var(--panel);border:1px solid var(--line2);color:var(--ink);
-  padding:12px 14px;border-radius:9px;cursor:pointer;font:inherit;font-size:15px;
-  min-height:48px;transition:.12s;
-}
-.opt.right{border-color:var(--up);background:var(--upbg);font-weight:650}
+/* ---------- verdict ---------- */
+.verdict{margin:-14px -14px 2px;padding:13px 14px;font-size:20px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.verdict.y{background:var(--up)} .verdict.n{background:var(--down)}
+.verdict.s{background:var(--judge)}
+.tally{font-size:13px;color:var(--dim);font-weight:650}
+
+/* ---------- inputs ---------- */
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{text-align:left;background:var(--panel);border:1.5px solid var(--rule);color:var(--ink);
+  padding:13px 14px;border-radius:9px;cursor:pointer;font-size:15.5px;min-height:50px}
+.opt.right{border-color:var(--up);background:var(--upbg);font-weight:700}
 .opt.wrong{border-color:var(--down);background:var(--downbg)}
-.opt:disabled{opacity:.55}
-#foot{flex:0 0 auto;border-top:1px solid var(--line);padding-top:11px;
-  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{
-  background:var(--acc);color:#fff;border:0;padding:13px 22px;border-radius:9px;
-  font:inherit;font-weight:650;font-size:15px;cursor:pointer;min-height:48px;
-}
-.verdict{font-size:12px;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
-.verdict.y{color:var(--up)} .verdict.n{color:var(--down)}
-details.src{font-size:13px;color:var(--dim);border-top:1px solid var(--line);padding-top:9px}
+.opt.chosen{border-color:var(--judge);border-width:3px}
+.opt:disabled{cursor:default;opacity:.72}
+.numin{font-size:20px;font-weight:700;padding:13px 14px;border-radius:9px;
+  border:1.5px solid var(--rule);width:100%;max-width:280px;min-height:54px;
+  font-variant-numeric:tabular-nums;color:var(--ink);background:var(--panel)}
+.numin:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px var(--accbg)}
+.txtin{font:inherit;font-size:15.5px;line-height:1.5;padding:12px 13px;border-radius:9px;
+  border:1.5px solid var(--rule);width:100%;min-height:130px;color:var(--ink);
+  background:var(--panel);resize:vertical}
+.txtin:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 3px var(--accbg)}
+.hint{font-size:13.5px;color:var(--dim)}
+.warn{font-size:14px;color:var(--ink);background:var(--hotbg);border:1.5px solid var(--hotline);
+  border-radius:8px;padding:10px 12px;font-weight:650}
+.model{border:1.5px solid var(--line);border-radius:9px;padding:12px 13px;background:var(--calc)}
+.model ul{margin:6px 0 0 18px;color:var(--body);font-size:15px;line-height:1.55}
+.model li{margin-bottom:7px}
+.model .h{font-size:11px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:var(--dim)}
+.confirm{border:1.5px solid var(--line);border-left:5px solid var(--acc);border-radius:8px;
+  padding:11px 13px;font-size:14px;line-height:1.55;color:var(--body);background:var(--accbg)}
+.confirm .h{font-size:10.5px;font-weight:800;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--acc);display:block;margin-bottom:4px}
+details.src{font-size:13.5px;color:var(--dim);border-top:1px solid var(--line);padding-top:8px}
 details.src summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
-  min-height:44px;padding:4px 0}
+  min-height:44px;font-weight:650}
 details.src summary::-webkit-details-marker{display:none}
-details.src summary::after{content:"▸";color:var(--line2);font-size:11px}
-details.src[open] summary::after{content:"▾"}
-details.src p{margin-top:7px;line-height:1.5}
-.hint{font-size:13px;color:var(--dim)}
-.btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--line2);font-weight:500;
+details.src summary::after{content:"\25B8"}
+details.src[open] summary::after{content:"\25BE"}
+details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
+#right.teach details.src p{color:var(--darkdim)}
+
+/* ---------- section map ---------- */
+#map{width:100%;max-width:680px;padding:16px 0 20px;display:flex;flex-direction:column;gap:10px}
+.maphead{font-size:21px;font-weight:700;letter-spacing:-.015em}
+.mapsub{font-size:14px;color:var(--body);line-height:1.55}
+.lvlhead{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  font-weight:800;margin-top:14px}
+.lvlhead span{color:var(--body);font-weight:600;letter-spacing:.01em;text-transform:none;font-size:12.5px}
+.sec{display:flex;align-items:center;gap:12px;background:var(--panel);border:1.5px solid var(--line);
+  border-radius:11px;padding:13px 14px;cursor:pointer;text-align:left;width:100%;min-height:66px}
+.sec.locked{cursor:default;background:#eef1f5}
+.sec.done{border-color:var(--upline)}
+.secnum{width:32px;height:32px;border-radius:99px;background:var(--calc);color:var(--dim);
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex:0 0 auto}
+.sec.done .secnum{background:var(--up);color:#fff}
+.sec.now .secnum{background:var(--acc);color:#fff}
+.sec.locked .secnum{background:#dfe5ec;color:var(--dim)}
+.secbody{flex:1 1 auto;min-width:0}
+.secname{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
+.secline{display:block;font-size:13px;color:var(--dim);margin-top:2px;line-height:1.4}
+.secprog{font-size:11.5px;color:var(--dim);font-weight:750;flex:0 0 auto;white-space:nowrap;
+  text-align:right;max-width:82px;line-height:1.3}
+
+/* ---------- the one fixed action bar. Same place on every screen. ---------- */
+.resetlink{margin:18px auto 0;background:none;border:0;color:var(--dim);font-size:13px;
+  font-weight:600;text-decoration:underline;cursor:pointer;padding:12px;min-height:44px}
+#foot{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);
+  border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;
+  padding:11px 14px calc(11px + env(safe-area-inset-bottom));min-height:var(--footh)}
+#foot .spacer{flex:1 1 auto}
+.btn{background:var(--acc);color:#fff;border:0;padding:13px 22px;border-radius:9px;
+  font-weight:700;font-size:15.5px;cursor:pointer;min-height:50px}
+.btn.ghost{background:transparent;color:var(--dim);border:1.5px solid var(--rule);font-weight:600;
   padding:13px 16px}
-.btn.ghost:disabled{opacity:.35}
-.lphint{font-size:10.5px;color:var(--line2);text-align:center;margin-top:7px;letter-spacing:.02em}
-/* the ONE thing worth flagging is what to go and ask, not a taxonomy label */
-.ask{background:var(--hotbg);border:1px solid var(--hotline);border-radius:8px;
-  padding:10px 12px;font-size:13.5px;line-height:1.5;color:#4a3410}
-.ask b{color:#3a2708}
-/* press-and-hold definition */
-#defWrap{display:none;position:fixed;inset:0;background:rgba(14,21,29,.45);z-index:50;
+.btn.dark{background:var(--judge)}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* ---------- definition dialog ---------- */
+#defWrap{display:none;position:fixed;inset:0;background:rgba(14,21,29,.5);z-index:70;
   align-items:center;justify-content:center;padding:24px}
-#defBox{background:var(--panel);border-radius:14px;padding:20px;max-width:420px;width:100%;
-  box-shadow:0 8px 40px rgba(14,21,29,.3);font-size:15px;line-height:1.55;color:#31414f}
+#defBox{background:var(--panel);border-radius:14px;padding:20px;max-width:430px;width:100%;
+  box-shadow:0 8px 40px rgba(14,21,29,.35);font-size:15.5px;line-height:1.6;color:var(--body)}
 #defBox b{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
 
+<div id="err" role="alert"></div>
+
 <div id="bar">
   <span class="t">Money Puzzles</span>
   <span class="t f" id="ver"></span>
-  <div id="dots"></div>
-  <button class="reset" onclick="restart()">reset</button>
-  <div class="units" id="units"></div>
+  <button class="topbtn" id="topbtn" type="button" onclick="goMap()">All sections</button>
 </div>
 
 <div id="stage">
-  <div id="left">
+  <div id="map"></div>
+  <div id="left" style="display:none">
     <div id="board"></div>
-    <div class="lphint">Press and hold any field for a reminder of what it means</div>
+    <div class="lphint">Tap the <b>?</b> on any field for a plain-English reminder of what it means</div>
   </div>
-  <div id="right">
-    <div class="scroll" id="panel"></div>
-    <div id="foot"></div>
+  <div id="right" style="display:none">
+    <div class="band" id="band"></div>
+    <div id="panel"></div>
   </div>
 </div>
 
-<div id="defWrap" onclick="hideDef()">
-  <div id="defBox" onclick="event.stopPropagation()">
+<div id="foot"></div>
+
+<div id="defWrap" role="dialog" aria-modal="true" aria-labelledby="defBody">
+  <div id="defBox">
     <div id="defBody"></div>
-    <button class="btn" style="margin-top:14px" onclick="hideDef()">Got it</button>
+    <button class="btn" id="defClose" type="button" style="margin-top:14px">Got it</button>
   </div>
 </div>
 
 <script>
-/* =====================================================================
-   THE BOARD. Nine cells, fixed positions, the real column names off the
-   monthly report. Four entered, five calculated, each calculated cell
-   carrying its own formula. There is no cell for work completed, and
-   that absence is lesson one.
-   All figures invented. This teaches ideas, not any real project.
-   ===================================================================== */
-const BASE = { fee:100000, jtd:40000, etc:40000, inv:30000 };
+"use strict";
+/* ═══════════════════════════════════════════════════════════════════
+   PART 1 — THE MODEL
+   Nine fields. Three arrive from outside the page, six are arithmetic.
+   derive() is the ONLY place a value is ever produced. Nothing below
+   may re-type a figure that derive() can compute.
+   Board order here is CALCULATION order, not the order printed on the
+   real Traffic Light Report, which runs FEE, % COMP, CLAIMED REVENUE,
+   INV, WIP, then TIME COST, SUBS & EXP, JTD COST, ETC COST, EAC COST,
+   JTD PROFIT. Calculation order is easier to learn. Confirmed by Josh
+   260803. A later section should walk the real page so the translation
+   is taught rather than assumed.
+   ═══════════════════════════════════════════════════════════════════ */
+const money = n => (n<0?"−$":"$") + Math.round(Math.abs(n)).toLocaleString("en-US");
+const pctS  = n => (n*100).toFixed(1) + "%";
+
 function derive(s){
-  const eac=s.jtd+s.etc, pct=eac?s.jtd/eac:0, rev=pct*s.fee;
-  return {...s, eac, pct, rev, wip:rev-s.inv, profit:rev-s.jtd};
+  const eac = s.jtd + s.etc;
+  const pct = eac ? s.jtd/eac : 0;
+  const rev = pct * s.fee;
+  return {name:s.name, fee:s.fee, jtd:s.jtd, etc:s.etc, inv:s.inv,
+          eac, pct, rev, wip:rev - s.inv, profit:rev - s.jtd};
 }
-const money = n => (n<0?"−$":"$")+Math.round(Math.abs(n)).toLocaleString("en-US");
-const pctS  = n => (n*100).toFixed(1)+"%";
 
 const CELLS=[
- {id:"fee",   k:"FEE",                                       f:s=>money(s.fee),
-  def:"<b>Fee.</b> The price in the contract. What the client agreed to pay for the whole job. Entered by a person, and it does not move unless the contract changes."},
- {id:"jtd",   k:"JTD COST",                                  f:s=>money(s.jtd),
-  def:"<b>Job to date cost.</b> Money already spent on this job: time booked to it, plus expenses. A fact, not an estimate. It comes off timesheets and invoices."},
- {id:"etc",   k:"ETC COST",                                  f:s=>money(s.etc),
-  def:"<b>Estimate to complete.</b> Your forecast of what is still left to spend before the job finishes. <b>The only number on this board that is an opinion rather than a fact, and it is yours.</b>"},
- {id:"eac",   k:"EAC COST",  sub:"JTD + ETC",                f:s=>money(s.eac),   calc:1,
-  def:"<b>Estimate at completion.</b> What the job is expected to cost in total, start to finish. Simply the money already spent plus your forecast of what is left."},
- {id:"pct",   k:"LIVE CALC % COMP", sub:"JTD ÷ EAC",         f:s=>pctS(s.pct),    calc:1,
-  def:"<b>Live calculated percent complete.</b> Money spent, divided by money expected to be spent in total. <b>It is NOT how much of the work is finished.</b> Nothing on this board looks at the drawings."},
- {id:"rev",   k:"CLAIMED REVENUE",  sub:"% COMP × FEE",      f:s=>money(s.rev),   calc:1,
-  def:"<b>Claimed revenue.</b> What the firm reports it has earned on this job so far. That percentage above, applied to the fee."},
- {id:"inv",   k:"INV",                                       f:s=>money(s.inv),
-  def:"<b>Invoiced.</b> What has actually been billed to the client. Follows the payment schedule in the contract, which has nothing to do with the calculation above."},
- {id:"wip",   k:"WIP",       sub:"REVENUE − INV",            f:s=>money(s.wip),   calc:1,
-  def:"<b>Work in progress.</b> Money the firm says it has earned but has not yet billed. The gap between the two."},
- {id:"profit",k:"JTD PROFIT",sub:"REVENUE − JTD",            f:s=>money(s.profit),calc:1,
-  def:"<b>Job to date profit.</b> What the firm says it earned, minus what it actually spent."}
+ {id:"fee", k:"FEE", fmt:"money",
+  def:"<b>FEE.</b> The price agreed for the work.<br><br>At <b>project</b> level that is what the signed contract says, and it changes only if the contract does, normally through an Additional Service Request.<br><br>On an individual <b>job</b> inside that project, the fee is the slice of the total allocated to it — and that slice can be moved between jobs, or drawn from the project's contingency, without the client contract changing at all.<br><br>On the real report the column is headed <b>FEE</b>, not \"contract\"."},
+ {id:"jtd", k:"JTD COST", sub:"JOB TO DATE", fmt:"money",
+  def:"<b>JTD COST</b> is short for <b>job to date cost</b>: money already spent on this job.<br><br><b>Nobody types this total in.</b> It accumulates on its own — every hour anybody books to the job in their timesheet, plus every sub-consultant invoice and expense.<br><br>On the real report it is two columns added together: <b>TIME COST</b> (the timesheet hours) plus <b>SUBS &amp; EXP</b> (sub-consultants and expenses)."},
+ {id:"etc", k:"ETC COST", sub:"ESTIMATE TO COMPLETE", fmt:"money",
+  def:"<b>ETC COST</b> is short for <b>estimate to complete</b>: the forecast of what is still left to spend before the job finishes.<br><br><b>This is the only number on the board that is an opinion rather than a record</b>, and on your own jobs the opinion is yours."},
+ {id:"eac", k:"EAC COST", sub:"JTD + ETC", fmt:"money", calc:1,
+  def:"<b>EAC COST</b> is short for <b>estimate at completion</b>: what the job is expected to cost in total, start to finish.<br><br>Money already spent, plus the forecast of what is left. Nothing more than those two added together."},
+ {id:"pct", k:"LIVE CALCULATED % COMP", sub:"JTD ÷ EAC", fmt:"pct", calc:1,
+  def:"<b>LIVE CALCULATED % COMP</b> is short for <b>live calculated percent complete</b>: money spent, divided by money expected to be spent in total.<br><br><b>It is not how much of the work is finished.</b> Nothing on this board looks at the drawings. A job that has burned half its budget reads 50% whether the drawings are done or barely started."},
+ {id:"rev", k:"CLAIMED REVENUE", sub:"% COMP × FEE", fmt:"money", calc:1,
+  def:"<b>CLAIMED REVENUE.</b> What the firm reports it has earned on this job so far: the percentage above, applied to the fee.<br><br>\"Claimed\" is the real column heading, not a word invented for this app. It is also the number people mean when they say the job has <b>earned</b> something."},
+ {id:"inv", k:"INV", sub:"INVOICED", fmt:"money",
+  def:"<b>INV</b> is short for <b>invoiced</b>: what has actually been billed to the client so far.<br><br>It moves on its own schedule — the invoice schedule set up on the project — and not on the cost calculation above it. People also say <b>billed</b> for this."},
+ {id:"wip", k:"WIP", sub:"REVENUE − INV", fmt:"money", calc:1,
+  def:"<b>WIP</b> is short for <b>work in progress</b>: money the firm says it has earned but has not yet asked the client for.<br><br>Claimed revenue minus invoiced. The gap between what has been earned on paper and what has been billed."},
+ {id:"profit", k:"JTD PROFIT", sub:"REVENUE − JTD", fmt:"money", calc:1,
+  def:"<b>JTD PROFIT</b> is short for <b>job to date profit</b>: what the firm says it earned, minus what it actually spent.<br><br>It is a profit on paper. The earning half of it comes out of a calculation, not out of anybody's bank account."}
 ];
-const CMAP=Object.fromEntries(CELLS.map(c=>[c.id,c]));
+const CMAP = Object.fromEntries(CELLS.map(c=>[c.id,c]));
+const fmtVal = (c,v) => c.fmt==="pct" ? pctS(v) : money(v);
 
-function drawBoard(state,opts={}){
-  const s=derive(state);
-  const cell=id=>{const c=CMAP[id];return `<div class="cell${c.calc?' calc':''}" data-id="${id}">
-    <div class="k">${c.k}</div>${c.sub?`<div class="s">${c.sub}</div>`:''}
-    <div class="v">${c.f(s)}</div></div>`;};
-  document.getElementById("board").innerHTML=`
-    <div class="brow">${cell("fee")}</div>
-    <div class="brow">${cell("jtd")}<div class="op">+</div>${cell("etc")}<div class="op">=</div>${cell("eac")}</div>
-    <div class="brow">${cell("pct")}${cell("rev")}</div>
-    <div class="brow">${cell("inv")}${cell("wip")}${cell("profit")}</div>`;
-  if(opts.selectable){
-    document.querySelectorAll("#board .cell").forEach(el=>{
-      el.classList.add("sel");
-      el.onclick=()=>{ if(suppressClick){suppressClick=false;return;} el.classList.toggle("picked"); };
-    });
-  }
-  attachDefinitions();
-}
-
-/* ---- press and hold any field for a plain-English reminder ----
-   Asked for directly: "if you press and hold a field it will pop up a short
-   reminder what each is." Long-press rather than tap, because tap is already
-   how you select cells in the click-the-cells puzzles. */
-let lpTimer=null, suppressClick=false;
-function showDef(id){
-  const c=CMAP[id];
-  if(!c || !c.def) return;
-  suppressClick = true;
-  document.getElementById("defBody").innerHTML = c.def;
-  document.getElementById("defWrap").style.display = "flex";
-}
-function hideDef(){ document.getElementById("defWrap").style.display="none"; }
-function attachDefinitions(){
-  document.querySelectorAll("#board .cell").forEach(el=>{
-    const id = el.dataset.id;
-    const start = ()=>{ clearTimeout(lpTimer); lpTimer=setTimeout(()=>showDef(id), 420); };
-    const cancel = ()=>{ clearTimeout(lpTimer); };
-    el.addEventListener("touchstart", start, {passive:true});
-    ["touchend","touchmove","touchcancel","mouseup","mouseleave"].forEach(ev=>
-      el.addEventListener(ev, cancel));
-    el.addEventListener("mousedown", start);
-    el.addEventListener("contextmenu", e=>{ e.preventDefault(); showDef(id); });
-  });
-}
-function applyChange(from,to,alsoStill=[],stillLabel="UNCHANGED"){
-  const a=derive(from),b=derive(to);
-  drawBoard(to);
-  CELLS.forEach(c=>{
-    const el=document.querySelector(`[data-id="${c.id}"]`), d=b[c.id]-a[c.id];
-    if(Math.abs(d)>0.005){
-      const dir=d>0?"up":"down";
-      el.classList.add(dir,"flash");
-      el.insertAdjacentHTML("beforeend",`<span class="chip ${dir}">${dir==="up"?"▲":"▼"}</span>`);
-    } else if(alsoStill.includes(c.id)){
-      el.classList.add("still","flash");
-      el.insertAdjacentHTML("beforeend",`<span class="chip still">${stillLabel}</span>`);
-    }
-  });
-}
-
-/* =====================================================================
-   CONTENT. Every puzzle carries an explanation screen. That is the
-   accuracy mechanism, not decoration: the single most complained-about
-   flaw in Duolingo's chess course is that a puzzle cannot be reviewed.
-   Sources collapse to one line and open on tap.
-   ===================================================================== */
-/* Provenance is kept but no longer shouted. Josh, 260803: the CONFIRMED /
-   NOT CONFIRMED chips "did not seem useful", the explanation text is.
-   He is right at this stage: a confidence label he cannot act on is noise.
-   So the flag survives only where it changes what he would DO, rendered as
-   a question to go and ask rather than a taxonomy tag. */
-const SRC={
- formula:"Slide 39 of an official internal deck states it: revenue equals cost spent to date, divided by total cost expected by the end, multiplied by the fee.",
- names:"These are the real column names off the monthly report, not plainer substitutes. They are the words used in the room."
+/* Board layout is DATA. A section names a layout; the engine draws it.
+   The first four sections run on seven cells. INV and WIP do not exist
+   on the board until the section that teaches them. */
+const LAYOUTS={
+  core:[["fee"],["jtd","+","etc","=","eac"],["pct","rev"],["profit"]],
+  full:[["fee"],["jtd","+","etc","=","eac"],["pct","rev"],["inv","wip","profit"]]
 };
-const ASK_WORKSTAGE = "<b>Worth checking before you repeat this to anyone.</b> Nobody in finance has confirmed whether this calculation runs once across the whole job, or separately for each workstage (the sub-code that hours and costs book to). The shape is right; that detail is open. The question to ask: <i>\"Does percent complete run per workstage, or across the whole job?\"</i>";
+const visibleIds = key => LAYOUTS[key].flat().filter(x=>CMAP[x]);
 
-const UNITS=[
-{name:"The board", steps:[
- {type:"concept",state:BASE,title:"Nine numbers describe a job.",
-  body:"Four are entered by a person. Five are calculated from those, and each calculated cell shows its own formula under its name.<br><br><b>Dashed cells are calculated. Solid cells are entered.</b>"},
+/* ═══════════════════════════════════════════════════════════════════
+   PART 2 — THE JOBS
+   Two invented jobs. No relation to any real Buro Happold project and
+   every figure is made up. Change a literal here and every number in
+   every sentence of the app follows it, because nothing is typed twice.
+   ═══════════════════════════════════════════════════════════════════ */
+const FOXGLOVE = {name:"Foxglove Library",   fee:100000, jtd:40000, etc:40000, inv:30000};
+const SANDPIPER= {name:"Sandpiper Pavilion", fee:200000, jtd:25000, etc:75000, inv:0};
 
- {type:"worked",state:BASE,after:BASE,
-  still:["fee","jtd","etc","inv"], stillLabel:"TYPED IN",
-  title:"Four of these are typed in. Five are worked out.",
-  setup:"Nobody types in a percentage or a profit. Those fall out of the others.<br><br>Watch which four a human actually enters.",
-  button:"Show me which",
-  reveal:"<b>FEE</b> comes from the contract. <b>JTD COST</b> comes off timesheets and invoices, money already gone. <b>ETC COST</b> is somebody's forecast of what is still left to spend. <b>INV</b> is what has been billed so far.<br><br>The five dashed ones are pure arithmetic from those.<br><br>One wrinkle worth holding on to: <b>only three of the four drive what the firm says it earned</b>, and they are FEE, JTD COST and ETC COST. INV is typed in too, but it sits completely outside that calculation. That is the next question."},
+const FOX_PLAN4    = {...FOXGLOVE, jtd:44000, etc:36000};
+const FOX_PLAN10   = {...FOXGLOVE, jtd:50000, etc:30000};
+const FOX_REWORK10 = {...FOXGLOVE, jtd:50000, etc:40000};
+const FOX_ETC10    = {...FOXGLOVE, etc:10000};
+const FOX_ETC60    = {...FOXGLOVE, etc:60000};
+const FOX_ETC30    = {...FOXGLOVE, etc:30000};
+const FOX_INV45    = {...FOXGLOVE, inv:45000};
+const FOX_INV40    = {...FOXGLOVE, inv:40000};
 
- {type:"choice",state:BASE,
-  q:"Everything the firm reports as earned is built out of three entered numbers. Which three?",
-  opts:["FEE, JTD COST, ETC COST","FEE, EAC COST, CLAIMED REVENUE",
-        "JTD COST, EAC COST, JTD PROFIT","FEE, LIVE CALC % COMP, INV"],
-  a:0,
-  why:"<b>FEE</b> is the agreed price. <b>JTD COST</b> is money already spent, job to date. <b>ETC COST</b> is money still expected to be spent, estimate to complete.<br><br>INV, what has been billed, is entered too, but it sits outside the earning calculation entirely.",
+const SRC={
+ formula:{t:"Slide 39 of an official internal Buro Happold deck states it directly: revenue equals cost spent to date, divided by total cost expected by the end, multiplied by the fee.<br><br>Two qualifiers, from the same slide. This is how <b>lump-sum</b> jobs work, which that deck puts at 90 to 95% of the firm's work; time-and-materials jobs recognise revenue as hours booked times an agreed billing rate instead. And that deck predates the May 2026 FRS 102 change, although the April 2026 FRS deck confirms this calculation itself continues unchanged."},
+ names:{t:"These are the real column headings off the <b>Traffic Light Report</b> — the Vantagepoint report a Project Director works from, which lands daily. They are the words used in the room, not plainer substitutes invented for this app.<br><br>Worth knowing before you quote them: the <b>monthly</b> project accounts sheet uses different words for several of these same numbers. Translating between the two reports is its own lesson."},
+ wholejob:{callout:true, h:"Two answers, not one",
+   t:"<b>The calculation on this board runs per workstage</b> — the sub-code that hours and costs book to. An official Buro Happold deck, PP-PD Forum 6 of April 2026, slide 9, states it: <i>“Currently, revenue is calculated at the workstage level based on fees, JTD costs, and EAC costs. That process will continue, but FRS 102 introduces a project level adjustment.”</i> On the live report, each workstage row carries its own percentage.<br><br><b>Sitting on top of that is one further line, the FRS adjustment, and that one is whole-job.</b> Samantha Teague, Project Accounting Manager, Buro Happold US Finance, in writing on 3 August 2026: <i>“The FRS adjustment is based on the % complete on the entire job.”</i> It sits on the root of the project, not on the individual jobs underneath it.<br><br>So: workstage by workstage for what you have just learned, whole job for the adjustment sitting above it."}
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   PART 3 — THE CONTENT
+   Everything here is DATA. Sections can be added, reordered, cut or
+   rewritten without touching a line of engine code.
+
+   EVERY SECTION AND EVERY STEP CARRIES A STABLE STRING id. Progress is
+   keyed on those ids and never on array position, so inserting a
+   section cannot corrupt saved progress.
+
+   NEVER TYPE A FIGURE. Write {jtd}, {after.rev}, {d.profit}, {FRAC}.
+   A literal money figure that derive() could have produced is a defect
+   and the in-app audit will refuse to start the app.
+
+   kind:
+     concept  teaching card, board hidden, dark panel. Nothing asked.
+     worked   guided demonstration on the board, dark panel, one stage
+              per tap, text REPLACED not appended. Nothing asked.
+              blank:true starts every box empty and fills them.
+     choice   pick one option
+     select   tap fields on the board. mode "movers" (default) asks what
+              MOVES and the answer is computed, never listed.
+              mode "identify" asks what fields ARE something, so its
+              answer is listed in ids.
+     compute  type a number. field names the derived value; the engine
+              computes the answer.
+     explain  type an explanation in your own words, self-scored.
+              ALWAYS SKIPPABLE AND NEVER BLOCKS A SECTION.
+   ═══════════════════════════════════════════════════════════════════ */
+
+const SECTIONS=[
+
+/* ═════════ 100 LEVEL ═════════ */
+{id:"origin", level:100, layout:"core",
+ name:"Where Each Number Comes From",
+ line:"Three arrive from outside. Four are arithmetic on this page.",
+ steps:[
+
+ {id:"origin.intro", kind:"concept",
+  title:"Seven numbers describe a job.",
+  body:"That is the whole page, for now.<br><br><b>Three of them arrive from somewhere outside this page.</b> A signed contract, a timesheet system, a person's judgement.<br><br><b>Four are worked out from those three</b>, by arithmetic, right here on the page.<br><br>This section is only about where each number comes from. No arithmetic yet."},
+
+ {id:"origin.worked", kind:"worked", state:FOXGLOVE, blank:true,
+  title:"The three that arrive from outside.",
+  setup:"This is <b>{job}</b>, an invented job used throughout. It is not a real Buro Happold project and every figure in this app is made up.<br><br>The three arrive by three completely different routes, and that matters more than it sounds.",
+  button:"Show me the first one",
+  stages:[
+   {cells:["fee"], text:"<b>FEE — {fee}.</b><br><br>Straight off the signed contract: the price the client agreed for the whole job.<br><br>Somebody in finance types it in, reading it off the contract document. The project total changes only if the contract does. The slice allocated to any one job inside that project can be moved around without the client ever hearing about it."},
+   {cells:["jtd"], text:"<b>JTD COST — {jtd}.</b> JTD is short for <b>job to date</b>.<br><br>Money already spent. <b>Nobody types this total in.</b> It accumulates on its own: every hour anyone books to this job in their timesheet, plus every sub-consultant invoice and expense.<br><br>On the real report it is two columns added: <b>TIME COST</b> and <b>SUBS &amp; EXP</b>."},
+   {cells:["etc"], text:"<b>ETC COST — {etc}.</b> ETC is short for <b>estimate to complete</b>.<br><br>The forecast of what is still left to spend before the job finishes.<br><br><b>This is the only one of the three that is somebody's opinion</b>, and on your own jobs that somebody is you. The fee is a contract. Money spent is a record of what happened. This is a judgement about a future that has not happened yet."}
+  ], src:["names"]},
+
+ {id:"origin.identify", kind:"select", mode:"identify", state:FOXGLOVE,
+  ids:["fee","jtd","etc"],
+  q:"<b>Tap the three fields that arrive from outside this page.</b><br><br>The other four are worked out right here, from those three.",
+  why:"<b>FEE, JTD COST and ETC COST.</b><br><br>FEE comes off the signed contract. JTD COST accumulates from timesheets and supplier invoices. ETC COST comes out of a person's head.<br><br>The other four — EAC COST, LIVE CALCULATED % COMP, CLAIMED REVENUE and JTD PROFIT — are worked out from those three and from nothing else.<br><br>Tap the <b>?</b> on any field for a reminder of what it means.",
   src:["names"]},
 
- {type:"choice",state:BASE,
-  q:"Point at the cell that tells you how much of the work is finished.",
-  opts:["LIVE CALC % COMP","EAC COST","JTD PROFIT","There is no such cell"],
+ {id:"origin.finished", kind:"choice", state:FOXGLOVE,
+  q:"Which of these tells you <b>how much of the scope has actually been delivered</b> — drawings issued, design work genuinely completed, deliverables out of the door?",
+  opts:["LIVE CALCULATED % COMP","EAC COST","JTD PROFIT","There is no such field"],
   a:3,
-  why:"<b>There is no cell for work completed.</b> Its absence is the point of this whole thing.<br><br>The trap is LIVE CALC % COMP. It reads like progress and it is not. It is money spent divided by money expected. A job that has burned half its budget reads 50% whether the drawings are finished or barely started.",
-  src:["formula","frs"]},
+  why:"<b>There is no such field.</b> Nothing on this board looks at the drawings, and that absence is the point of the whole app.<br><br>The one that looks like it ought to be it is <b>LIVE CALCULATED % COMP</b>. That is money spent divided by money expected to be spent. It is a <i>money</i> percentage, not a <i>work</i> percentage.<br><br>{job} has spent {jtd} of an expected {eac}, so it reads {pct}. It would read {pct} whether the drawings were finished or barely started.",
+  src:["formula","wholejob"]},
 
- {type:"choice",state:BASE,
-  q:"CLAIMED REVENUE reads $50,000 on a fee of $100,000. Where did that come from?",
-  opts:["Half the deliverables are complete","% COMP of 50.0% times the $100,000 fee",
-        "Half the fee has been invoiced","It was agreed with the client at the halfway point"],
-  a:1,
-  why:"$40,000 spent, divided by $80,000 expected, is <b>50.0%</b>. Times the $100,000 fee, and the firm reports <b>$50,000 earned</b>.<br><br>No human decided that. Nobody looked at the drawings.",
-  src:["formula","frs"]}
+ {id:"origin.opinion", kind:"choice", state:FOXGLOVE,
+  q:"ETC COST — the estimate of what is still left to spend — is described as the one number here that is somebody's opinion. Why?",
+  opts:["Because it is a forecast of money not yet spent, and a person has to judge it",
+        "Because finance revises it every month",
+        "Because it comes from the contract, and contracts get renegotiated",
+        "Because it is calculated from the other numbers"],
+  a:0,
+  why:"<b>Because it is a forecast, and a person makes it.</b><br><br>FEE is contracted. JTD COST is a record of hours already booked and invoices already received. The four dashed fields are arithmetic.<br><br>ETC COST is a judgement about a future that has not happened. On your projects, the person making it is you. Both 200-level sections are about what follows from that."}
 ]},
 
-{name:"Spending is the engine", steps:[
- {type:"concept",state:BASE,title:"Revenue answers to money spent. Nothing else.",
-  body:"This is the idea everything hangs off, and the one that feels wrong at first.<br><br>Finishing something does not move a number. Spending does."},
+{id:"arith", level:100, layout:"core",
+ name:"The Arithmetic",
+ line:"How the four calculated numbers are made",
+ steps:[
 
- {type:"select",state:BASE,after:BASE,
-  still:["fee","jtd","etc","eac","pct","rev","inv","wip","profit"],
-  q:"You issue the complete drawing set today. A major milestone, delivered.<br><br><b>In the board above, tap every field that moves.</b> If none do, tap nothing and submit anyway.",
-  a:[],
-  why:"<b>Nothing moved.</b> Not one cell.<br><br>Issuing the drawings changed no cost, so it changed no revenue. The board has nowhere to record that it happened.<br><br>This is why a job can feel finished and report as though it is not.",
-  src:["formula"]},
+ {id:"arith.intro", kind:"concept",
+  title:"Four numbers are only arithmetic.",
+  body:"Every calculated field carries its own formula printed under its name, and you will see them as the boxes fill.<br><br>This section does all four by hand, once, on a second invented job, so they stop feeling like magic."},
 
- {type:"worked",state:BASE,after:{...BASE,jtd:44000,etc:36000},
-  title:"Book some time, on plan, and follow it through.",
-  setup:"$4,000 of time gets booked to the job this week. It was planned work, so the forecast of what is left drops by the same $4,000.<br><br>Before you press: nothing has been delivered to the client. No drawing was issued. Only money moved.",
-  button:"Watch what happens",
-  reveal:"<b>JTD COST</b> went $40,000 to $44,000. <b>ETC COST</b> went $40,000 to $36,000.<br><br><b>EAC COST did not move.</b> Still $80,000, because the $4,000 just crossed from one side to the other. The job is not expected to cost any more than it was.<br><br>But the top of the division grew, so <b>% COMP goes 50.0% to 55.0%</b>, and <b>CLAIMED REVENUE goes $50,000 to $55,000</b>.<br><br>Revenue rose $5,000 while cost rose $4,000, so <b>JTD PROFIT went $10,000 to $11,000</b>.<br><br>That is the whole shape. Now the same move twice, and the two answers are opposite.",
-  src:["formula"]},
+ {id:"arith.worked", kind:"worked", state:SANDPIPER, blank:true,
+  title:"A second job. Watch it build from empty.",
+  setup:"This is <b>{job}</b>: a bigger fee, and it has barely started. Every box is empty and they fill one at a time.<br><br>Nothing carries over from the first job. Read every number fresh.",
+  button:"Fill the first three",
+  stages:[
+   {cells:["fee","jtd","etc"], text:"The three that arrive from outside.<br><br>Fee <b>{fee}</b>, off the contract. <b>{jtd}</b> already spent, off timesheets and supplier invoices. <b>{etc}</b> still forecast to spend, which is somebody's judgement."},
+   {cells:["eac"], text:"<b>EAC COST</b> — estimate at completion — is only the two cost numbers added together.<br><br>{jtd} already spent, plus {etc} still to come, is <b>{eac}</b> expected to be spent in total, start to finish."},
+   {cells:["pct"], text:"Then the division that runs everything: money spent, over money expected in total.{FRAC}That is <b>LIVE CALCULATED % COMP</b>. A quarter of the expected money has gone out."},
+   {cells:["rev"], text:"<b>CLAIMED REVENUE</b> is that percentage applied to the fee.<br><br>{pct} of {fee} is <b>{rev}</b>. That is what the firm reports it has earned on this job so far.<br><br>Nobody looked at a drawing to decide it."},
+   {cells:["profit"], text:"<b>JTD PROFIT</b> is what the firm says it earned, minus what it actually spent.<br><br>{rev} earned, minus {jtd} spent, is <b>{profit}</b>.<br><br>That is every calculated field on this board."}
+  ], src:["formula"]},
 
- {type:"choice",state:BASE,after:{...BASE,jtd:50000,etc:30000},
-  q:"You book $10,000 of time this week. The work was planned, so ETC COST drops by the same $10,000.<br><br>Which way does JTD PROFIT go?",
-  opts:["Up","Down","It does not move"],a:0,
-  why:"EAC COST stays at $80,000, because $10,000 moved from one side to the other. But JTD COST is now $50,000, so % COMP rises to <b>62.5%</b> and CLAIMED REVENUE to <b>$62,500</b>.<br><br>Revenue rose $12,500 while cost rose $10,000, so <b>JTD PROFIT rose to $12,500</b>. Spending on plan earns money.",
-  src:["formula","frs"]},
+ {id:"arith.eac", kind:"compute", state:SANDPIPER, field:"eac",
+  q:"{job} has spent <b>{jtd}</b> so far, and forecasts <b>{etc}</b> still to spend.<br><br>What is EAC COST, the estimate at completion?",
+  hint:"the two cost numbers, added together",
+  why:"<b>{eac}.</b> EAC COST is only ever money already spent, plus the forecast of what is left. Nothing cleverer than that."},
 
- {type:"choice",state:BASE,after:{...BASE,jtd:50000,etc:40000},
-  q:"Same week, same $10,000 booked. But it was rework nobody planned, so ETC COST does <b>not</b> drop. Still $40,000 of work left.<br><br>Which way does JTD PROFIT go?",
-  opts:["Up","Down","It does not move"],a:1,
-  why:"EAC COST rises to <b>$90,000</b>. % COMP goes to 55.6%, so CLAIMED REVENUE is <b>$55,556</b>.<br><br>Revenue rose about $5,556 while cost rose $10,000, so <b>JTD PROFIT fell to about $5,556</b>.<br><br>Compare the two. <b>Identical cash out the door. Opposite result.</b> The only difference was what happened to a forecast.",
-  src:["formula","frs"]}
+ {id:"arith.pct", kind:"compute", state:SANDPIPER, field:"pct",
+  q:"Same job. <b>{jtd}</b> spent, <b>{eac}</b> expected to be spent in total.<br><br>What is LIVE CALCULATED % COMP? Type the number only.",
+  hint:"money spent ÷ money expected in total. A percentage or a decimal are both accepted, and so is the sum itself.",
+  why:"<b>{pct}.</b>{FRAC}It does not mean a quarter of the drawings are done. It means a quarter of the expected money has gone.",
+  src:["formula","wholejob"]},
+
+ {id:"arith.rev", kind:"compute", state:SANDPIPER, field:"rev",
+  q:"The fee is <b>{fee}</b>, and <b>LIVE CALCULATED % COMP reads {pct}</b>.<br><br>What does the firm say it has earned — CLAIMED REVENUE?",
+  hint:"that percentage, applied to the fee",
+  why:"<b>{rev}.</b> A quarter of the fee, because a quarter of the expected cost has been spent.<br><br>Nobody looked at the drawings to decide that, and no human signed it off. It is two cost numbers and a price.",
+  src:["formula","wholejob"]},
+
+ {id:"arith.profit", kind:"compute", state:SANDPIPER, field:"profit",
+  q:"{job} says it has earned <b>{rev}</b>, and it has spent <b>{jtd}</b>.<br><br>What is JTD PROFIT?",
+  hint:"earned minus spent",
+  why:"<b>{profit}.</b> Earned minus spent.<br><br>It is a profit on paper. The earning half of it came out of the calculation you just did, not out of anybody's bank account."}
 ]},
 
-{name:"The forecast is the lever", steps:[
- {type:"concept",state:BASE,title:"One number here is not a fact.",
-  body:"FEE is contracted. JTD COST is what was actually spent, down to the timesheet.<br><br><b>ETC COST is a forecast.</b> Somebody's estimate of what is still to come. On your projects, that somebody is you."},
+/* ═════════ 200 LEVEL ═════════ */
+{id:"spend", level:200, layout:"core",
+ name:"Spending Is The Engine",
+ line:"Reported earnings follow money spent, not work finished",
+ steps:[
 
- {type:"worked",state:BASE,after:{...BASE,etc:10000}, still:["jtd"],
+ {id:"spend.intro", kind:"concept",
+  title:"Revenue answers to money spent. Nothing else.",
+  body:"This is the idea everything else hangs off, and it is the one that feels wrong the first time you meet it.<br><br><b>Finishing something moves nothing on this page. Spending does.</b>"},
+
+ {id:"spend.nothing", kind:"select", state:FOXGLOVE, after:FOXGLOVE,
+  q:"Back on <b>{job}</b>. Today you issue the complete drawing set: a major milestone, delivered, out of the door.<br><br><b>Tap every field that moves.</b>",
+  why:"<b>Nothing moved. Not one field.</b><br><br>Issuing the drawings changed no cost, so it changed no reported revenue. There is nowhere on this board to record that it happened at all.<br><br>This is why a job can feel finished and still report as though it is not.",
+  src:["formula"]},
+
+ {id:"spend.worked", kind:"worked", state:FOXGLOVE, after:FOX_PLAN4,
+  title:"Book time that was planned, and follow it through.",
+  setup:"Somebody puts <b>{d.jtd}</b> of hours on {job} in their timesheet this week.<br><br>It was planned work, so the forecast of what is left drops by the same amount. Nothing was delivered. No drawing was issued. Only money moved.",
+  button:"Follow it through",
+  stages:[
+   {cells:["jtd"], text:"<b>JTD COST</b> rises by {d.jtd}, to <b>{after.jtd}</b>. That is the timesheet hours landing."},
+   {cells:["etc"], text:"<b>ETC COST</b> falls by {d.etc}, to <b>{after.etc}</b>. The work got done, so there is that much less of it left to do."},
+   {cells:["eac"], text:"<b>EAC COST does not move.</b> Still {after.eac}.<br><br>The money simply crossed from one side to the other. The job is not expected to cost a penny more than it was."},
+   {cells:["pct"], text:"The top of the fraction grew and the bottom did not, so the percentage rises.{FRAC.after}"},
+   {cells:["rev"], text:"<b>CLAIMED REVENUE</b> is {after.pct} of the {fee} fee, so <b>{after.rev}</b>. Up {d.rev}."},
+   {cells:["profit"], text:"Reported earnings rose {d.rev} while cost rose {d.jtd}, so <b>JTD PROFIT goes {profit} to {after.profit}</b>.<br><br>Money went out of the door and the job got more profitable."}
+  ], src:["formula"]},
+
+ {id:"spend.planned", kind:"choice", state:FOXGLOVE, after:FOX_PLAN10,
+  q:"You book <b>{d.jtd}</b> of time on {job} this week. The work was planned, so ETC COST drops by the same {d.etc}.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"], a:0,
+  why:"<b>Up.</b> EAC COST stays at {after.eac}, because the {d.jtd} crossed from one side to the other. JTD COST is now {after.jtd}, so LIVE CALCULATED % COMP rises to {after.pct} and CLAIMED REVENUE to {after.rev}.<br><br>Reported earnings rose {d.rev} while cost rose {d.jtd}, so <b>JTD PROFIT rose from {profit} to {after.profit}</b>.<br><br>Spending on plan earns money.",
+  src:["formula","wholejob"]},
+
+ {id:"spend.rework", kind:"choice", state:FOXGLOVE, after:FOX_REWORK10,
+  q:"Same week, same <b>{d.jtd}</b> booked on {job}. But this was rework nobody planned, so <b>ETC COST does not drop</b>. There is still {etc} of work left to do.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"], a:1,
+  why:"<b>Down.</b> EAC COST rises to {after.eac}, because the {d.jtd} was added and nothing came off the forecast. LIVE CALCULATED % COMP goes to {after.pct}, so CLAIMED REVENUE is {after.rev}.<br><br>Reported earnings rose about {d.rev} while cost rose {d.jtd}, so <b>JTD PROFIT fell from {profit} to about {after.profit}</b>.<br><br><b>Identical cash out of the door. Opposite result.</b> The only difference was what happened to a forecast.",
+  src:["formula","wholejob"]},
+
+ {id:"spend.explain", kind:"explain", state:FOXGLOVE, after:FOX_REWORK10,
+  prompt:"Say it in your own words, as if to somebody who has never seen this app.<br><br><b>Why did the same {d.jtd} of booked time make the job more profitable in one case, and less profitable in the other?</b>",
+  model:["The booked cost landed on JTD COST in both cases, so money spent rose by the same {d.jtd} either way.",
+         "In the planned case, the forecast of remaining work (ETC COST) dropped by the same amount, so EAC COST — the total expected cost — did not change at all.",
+         "The top of the fraction grew and the bottom stayed still, so LIVE CALCULATED % COMP rose, and CLAIMED REVENUE rose with it, by more than the cost did.",
+         "In the rework case, ETC COST did not drop, so EAC COST rose too. The bottom of the fraction grew as well, so the percentage rose much less, and revenue rose by less than the cost.",
+         "So the thing that decided the outcome was neither the work nor the money. It was what happened to a forecast."]}
+]},
+
+{id:"forecast", level:200, layout:"core",
+ name:"The Forecast Is Yours",
+ line:"Move it, and money already reported moves with it",
+ steps:[
+
+ {id:"forecast.intro", kind:"concept",
+  title:"One number here is not a fact.",
+  body:"FEE is contracted. JTD COST is a record of what was actually spent, down to the timesheet line.<br><br><b>ETC COST is a forecast.</b> Somebody's estimate of what is still to come.<br><br>On your projects, that somebody is you."},
+
+ {id:"forecast.worked", kind:"worked", state:FOXGLOVE, after:FOX_ETC10, stillLabel:"DID NOT MOVE",
   title:"Change only the forecast. Change nothing real.",
-  setup:"The job is going far better than expected. You decide only $10,000 of work is left, not $40,000.<br><br>You do not spend anything. You do not deliver anything. You do not tell the client. You change one number that lives in your own head.",
-  button:"Watch what happens",
-  reveal:"<b>JTD COST did not move.</b> $40,000 spent, before and after. Watch that cell; it is the one telling the truth.<br><br>EAC COST fell $80,000 to $50,000, so <b>% COMP jumped 50.0% to 80.0%</b> and <b>CLAIMED REVENUE went $50,000 to $80,000</b>. <b>JTD PROFIT went $10,000 to $40,000.</b><br><br><b>The firm just booked $30,000 of income because you revised an opinion.</b> Not this month's work. Income, on a keystroke.<br><br>Now predict the same lever in the other direction.",
-  src:["formula","frs"]},
+  setup:"{job} is going far better than expected. You decide only {after.etc} of work is left, not {etc}.<br><br>You spend nothing. You deliver nothing. You change one thing: your view of the work still to come.",
+  button:"Follow it through",
+  stages:[
+   {cells:["etc"], text:"<b>ETC COST</b> goes {etc} to <b>{after.etc}</b>. That is the only thing you touched."},
+   {cells:["jtd"], text:"<b>JTD COST did not move.</b> {jtd} spent, before and after.<br><br>Keep your eye on this one. It is the field telling the truth."},
+   {cells:["eac"], text:"<b>EAC COST</b> falls {eac} to <b>{after.eac}</b>, because it is only ever the two numbers above it added together."},
+   {cells:["pct"], text:"The same money spent on top. A much smaller number underneath.{FRAC.after}"},
+   {cells:["rev"], text:"{after.pct} of the {fee} fee is <b>{after.rev}</b> of CLAIMED REVENUE, up from {rev}."},
+   {cells:["profit"], text:"<b>JTD PROFIT goes {profit} to {after.profit}.</b><br><br>The firm just booked <b>{d.profit} of income because you revised an opinion.</b> No work was done. No invoice went out. Nobody spoke to the client."}
+  ], src:["formula","wholejob"]},
 
- {type:"choice",state:BASE,after:{...BASE,etc:60000},
-  q:"You conclude the job will take longer and raise ETC COST from $40,000 to $60,000. You touch nothing else.<br><br>Which way does CLAIMED REVENUE go?",
-  opts:["Up","Down","It does not move, because no work changed"],a:1,
-  why:"EAC COST rises to $100,000, so % COMP falls from 50.0% to <b>40.0%</b> and CLAIMED REVENUE from $50,000 to <b>$40,000</b>.<br><br><b>The firm just un-earned $10,000</b>, in a month where nobody did anything differently.",
-  src:["formula","frs"]},
+ {id:"forecast.raise", kind:"choice", state:FOXGLOVE, after:FOX_ETC60,
+  q:"Back to where {job} started, with {etc} forecast still to spend. You now conclude the job will take longer, and you raise ETC COST from {etc} to {after.etc}. You touch nothing else.<br><br>Which way does CLAIMED REVENUE go?",
+  opts:["Up","Down","It does not move, because no work changed"], a:1,
+  why:"<b>Down.</b> EAC COST rises to {after.eac}, so LIVE CALCULATED % COMP falls from {pct} to {after.pct}, and CLAIMED REVENUE falls from {rev} to {after.rev}.<br><br><b>The firm has just un-earned {d.rev}</b>, in a month when nobody did anything differently.",
+  src:["formula","wholejob"]},
 
- {type:"select",state:BASE,after:{...BASE,etc:60000},still:["jtd"],
-  q:"Same move. ETC COST goes from $40,000 to $60,000.<br><br><b>In the board above, tap every field that moves.</b>",
-  a:["etc","eac","pct","rev","wip","profit"],
-  why:"Six cells move. <b>JTD COST does not</b>, and that is the cell to watch.<br><br>Money actually spent is unchanged. Work delivered is unchanged. The client is unchanged. Reported income fell $10,000 anyway.",
-  src:["formula","frs"]},
+ {id:"forecast.movers", kind:"select", state:FOXGLOVE, after:FOX_ETC60,
+  q:"The same move. ETC COST goes from {etc} to {after.etc}, and nothing else is touched.<br><br><b>Tap every field that reads differently afterwards — including the one you changed yourself.</b>",
+  why:"<b>{nmovers} fields move: {lmovers}.</b><br><br><b>JTD COST does not, and that is the one to watch.</b> Money actually spent is unchanged at {jtd}. Work delivered is unchanged. The client is unchanged.<br><br>Reported income fell {d.rev} anyway, and <b>JTD PROFIT is now {after.profit}</b> — the whole paper profit, gone, in a month when nobody did anything differently.",
+  src:["formula","wholejob"]},
 
- {type:"choice",state:{...BASE,etc:60000},after:{...BASE,etc:30000},
-  q:"A month later it goes better than feared. You cut ETC COST from $60,000 to $30,000.<br><br>What happens to CLAIMED REVENUE?",
-  opts:["It rises sharply, to about $57,000","It stays put, you cannot un-report a loss",
-        "It rises only next year, when the job closes"],a:0,
-  why:"% COMP jumps to <b>57.1%</b> and CLAIMED REVENUE to about <b>$57,100</b>. Up roughly $17,000 from last month, on a forecast revision alone.<br><br><b>The lever works both ways.</b> It is not a penalty box. It is a live wire.",
-  src:["formula","frs"]},
+ {id:"forecast.cut", kind:"choice", state:FOX_ETC60, after:FOX_ETC30,
+  q:"A month later {job} goes better than feared, and you cut ETC COST from {etc} down to {after.etc}.<br><br>What happens to CLAIMED REVENUE?",
+  opts:["It rises sharply, to about {after.rev}",
+        "It stays put — you cannot un-report a loss",
+        "It rises only next year, when the job closes"],
+  a:0,
+  why:"<b>It rises to about {after.rev}.</b> LIVE CALCULATED % COMP jumps from {pct} to {after.pct}.<br><br>That is roughly {d.rev} more than last month, on a forecast revision alone.<br><br><b>The lever works both ways.</b> It is not a penalty box. It is a live wire.",
+  src:["formula","wholejob"]},
 
- {type:"concept",state:BASE,title:"Now the part no puzzle can teach.",
-  body:"You have just seen that one number, which you set, moves reported income either way with no change in the work.<br><br>That is why it is the number auditors look at, and why shading it is a real decision rather than a technicality.<br><br>Nobody checks your forecast the way they check your timesheet. <b>There is no test at the end of this section, because the test happens every month.</b>"}
-]}];
+ {id:"forecast.explain", kind:"explain", state:FOXGLOVE, after:FOX_ETC60,
+  prompt:"A colleague looks at the month-end sheet and says <b>“we lost {d.rev} on {job} this month.”</b> You check, and nothing changed except ETC COST.<br><br><b>In your own words, what do you tell them?</b>",
+  model:["Nothing was actually lost. No extra money was spent, and no work was undone.",
+         "The forecast of remaining cost, ETC COST, was raised from {etc} to {after.etc}.",
+         "That raised EAC COST, the total expected cost, from {eac} to {after.eac}.",
+         "LIVE CALCULATED % COMP is money spent divided by money expected in total, so a bigger bottom number makes the percentage fall — from {pct} to {after.pct}.",
+         "CLAIMED REVENUE is that percentage times the fee, so it fell too, from {rev} to {after.rev}. That fall is the {d.rev} they are looking at.",
+         "So the right question is not “what went wrong this month”. It is “is the new forecast right”."]},
 
-/* ===================== engine ===================== */
-const BUILD="v2.3 · built 260803 0905 ET";
-document.getElementById("ver").textContent="units 1–3 · "+BUILD;
-let U=0,S=0,answered=false;
-try{const sv=JSON.parse(localStorage.getItem("mp_v2")||"null");if(sv){U=sv.U;S=sv.S;}}catch(e){}
-const save=()=>{try{localStorage.setItem("mp_v2",JSON.stringify({U,S}));}catch(e){}};
+ {id:"forecast.close", kind:"concept",
+  title:"The part no puzzle can teach.",
+  body:"You have just seen that one number, which you set yourself, moves reported income in either direction with no change at all in the work.<br><br>That is why Buro Happold puts a control around it. The Project Director reviews the plans with the Job Leads by the 23rd of the month, and signs off the ETC on every job plan as part of the Project Director Checklist by the 25th. The firm's own guidance is that a plan change gets laid out to the relevant people <i>before</i> it is made.<br><br>Shading a forecast is a real decision, not a technicality. <b>There is no test at the end of this section, because the test happens every month.</b>"}
+]},
 
-function chrome(){
-  document.getElementById("units").innerHTML=UNITS.map((u,i)=>
-    `<span class="upill ${i===U?'on':(i<U?'done':'')}">${i+1}. ${u.name}</span>`).join("");
-  document.getElementById("dots").innerHTML=UNITS[U].steps.map((_,i)=>
-    `<span class="dot ${i===S?'on':(i<S?'done':'')}"></span>`).join("");
+/* ═════════ 300 LEVEL ═════════
+   Moved here from the 100 level on 260803. Two reviewers disagreed on
+   the surface and agreed underneath: the section is well built and it
+   was in the wrong place. It is a second, competing schema, and its
+   presence forced INV and WIP onto the board through eighteen steps
+   where they did nothing. The board only grows to nine cells here. */
+{id:"billing", level:300, layout:"full",
+ name:"Earned and Billed",
+ line:"Two numbers, two schedules, and the gap between them",
+ steps:[
+
+ {id:"billing.intro", kind:"concept",
+  title:"Two new boxes, and they run on a different clock.",
+  body:"Everything so far used seven boxes. From here it has nine.<br><br><b>INV</b> is short for <b>invoiced</b>: what has actually been billed to the client. It moves on its own schedule, the invoice schedule set up on the project. People also say <b>billed</b> for this.<br><br><b>WIP</b> is short for <b>work in progress</b>: claimed revenue minus invoiced. Money the firm says it has earned but has not yet asked for.<br><br>What the firm <b>earns</b> comes out of the cost calculation. What it <b>bills</b> comes off the invoice schedule. The two calculations do not touch.<br><br>They are watched together, though: the firm's own guidance is that a growing WIP is the prompt to raise an invoice."},
+
+ {id:"billing.worked", kind:"worked", state:FOXGLOVE, after:FOX_INV45, stillLabel:"NO CHANGE",
+  title:"Send an invoice. Watch what does not move.",
+  setup:"Back to {job}: {rev} claimed as earned, {inv} billed so far, so {wip} sitting in WIP.<br><br>The billing team now raises another {d.inv} of invoice.",
+  button:"Send it",
+  stages:[
+   {cells:["inv"], text:"<b>INV</b> goes {inv} to <b>{after.inv}</b>. That is the invoice going out to the client."},
+   {cells:["wip"], text:"<b>WIP</b> falls {wip} to <b>{after.wip}</b>. It is only ever claimed revenue minus invoiced, so billing more closes the gap."},
+   {cells:["pct","rev","profit"], text:"<b>And nothing else moved at all.</b> Not the percentage, not what the firm says it earned, not the profit.<br><br>Invoicing does not earn anything. The earning already happened when the money was spent. The invoice is only asking to be paid for it."}
+  ], src:["names"]},
+
+ {id:"billing.early", kind:"choice", state:FOXGLOVE,
+  q:"You persuade the client to let you invoice a big chunk of {job} early.<br><br>What happens to CLAIMED REVENUE?",
+  opts:["Nothing. Invoicing does not change what the firm says it earned",
+        "It rises, because billing is how revenue gets recognised",
+        "It falls, because WIP falls",
+        "It rises next month, once the client pays"],
+  a:0,
+  why:"<b>Nothing.</b> Earning follows money spent. Billing follows the project's invoice schedule.<br><br>Invoicing early is still worth doing, because it is cash in the door sooner. It is just not revenue.",
+  src:["names"]},
+
+ {id:"billing.movers", kind:"select", state:FOXGLOVE, after:FOX_INV40,
+  q:"{job} invoices another <b>{d.inv}</b>.<br><br><b>Tap every field that reads differently afterwards.</b>",
+  why:"<b>{lmovers}. Nothing else.</b><br><br>INV goes {inv} to {after.inv}. WIP, being claimed revenue minus invoiced, falls {wip} to {after.wip}.<br><br>Everything on the earning side is untouched, because none of it knows or cares that an invoice went out."},
+
+ {id:"billing.sandpiper", kind:"choice", state:SANDPIPER,
+  q:"On <b>{job}</b>, WIP reads {wip} — exactly the same as CLAIMED REVENUE. Why?",
+  opts:["Because nothing has been invoiced yet, and WIP is claimed revenue minus invoiced",
+        "Because WIP always equals claimed revenue",
+        "Because the client has not paid the invoice",
+        "Because a quarter of the job is done"],
+  a:0,
+  why:"<b>Because INV is {inv}.</b> WIP is claimed revenue minus invoiced, so with nothing billed, the whole {rev} sits earned but unbilled.<br><br>That gap is not a mistake. It is information."},
+
+ {id:"billing.meaning", kind:"choice", state:FOXGLOVE,
+  q:"A job's WIP has been large and growing for three months. What does that actually tell you?",
+  opts:["The firm says it has earned money it has not yet asked the client for",
+        "The job is losing money",
+        "The client is refusing to pay",
+        "The forecast is wrong"],
+  a:0,
+  why:"<b>Earned, not yet billed, and the gap is widening.</b><br><br>It might be a billing lag, which is a cash problem worth chasing. It might be that the claim is running ahead of what you could defend to a client, which is a forecast problem. WIP on its own does not tell you which.<br><br>And a client who has been billed and is simply not paying shows up somewhere else entirely, under UNPAID INV.",
+  src:["names"]}
+]}
+];
+
+/* ═══════════════════════════════════════════════════════════════════
+   PART 4 — DERIVED ANSWERS, TOKENS, STORAGE
+   No answer key is ever written down. Every asserted value is produced
+   by derive() at render time, from the same state the board draws from.
+   ═══════════════════════════════════════════════════════════════════ */
+const BUILD = "v4.1 · built 260803 1739 ET";
+
+const ALLSTEPS = SECTIONS.flatMap((s,i)=>s.steps.map(st=>({...st, _sec:i})));
+const SECOF = {}; SECTIONS.forEach((s,i)=>s.steps.forEach(st=>{SECOF[st.id]=i;}));
+const layoutOf = step => SECTIONS[SECOF[step.id]].layout;
+
+function fracHTML(s){
+  const box='display:inline-flex;flex-direction:column;align-items:center;text-align:center';
+  const lbl='font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;opacity:.75';
+  const num='font-size:14.5px;font-weight:800;padding:3px 10px';
+  return '<span style="display:flex;align-items:center;gap:14px;margin:10px 0;flex-wrap:wrap">'
+    +'<span style="'+box+'">'
+    +'<span style="'+lbl+'">money spent</span>'
+    +'<span style="'+num+'">'+money(s.jtd)+'</span>'
+    +'<span style="border-top:2px solid currentColor;align-self:stretch"></span>'
+    +'<span style="'+num+'">'+money(s.eac)+'</span>'
+    +'<span style="'+lbl+'">money expected in total</span></span>'
+    +'<span style="font-size:19px;font-weight:800">= '+pctS(s.pct)+'</span></span>';
 }
-function render(){
-  chrome(); answered=false;
-  const step=UNITS[U].steps[S], panel=document.getElementById("panel"), foot=document.getElementById("foot");
-  drawBoard(step.state,{selectable:step.type==="select"});
-  window.scrollTo(0,0);
-  if(step.type==="concept"){
-    panel.innerHTML=`<div class="kicker">Unit ${U+1} · ${UNITS[U].name}</div>
-      <h1>${step.title}</h1><div class="body">${step.body}</div>`;
-    foot.innerHTML=`${backBtn()}<button class="btn" onclick="next()">Start</button>`;
-    return;
+
+function moversFor(step){
+  const vis = visibleIds(layoutOf(step));
+  if(!step.state) return [];
+  const a=derive(step.state), b=derive(step.after||step.state);
+  return vis.filter(id=>Math.abs(b[id]-a[id])>0.005);
+}
+function answerIds(step){
+  return step.mode==="identify" ? step.ids.slice() : moversFor(step);
+}
+function computeAnswer(step){ return derive(step.state)[step.field]; }
+
+function tokenValue(tok, step){
+  if(tok==="job")     return step.state ? (derive(step.state).name||"") : undefined;
+  if(tok==="FRAC")    return step.state ? fracHTML(derive(step.state)) : undefined;
+  if(tok==="FRAC.after") return step.state ? fracHTML(derive(step.after||step.state)) : undefined;
+  if(tok==="nmovers") return String(moversFor(step).length);
+  if(tok==="lmovers"){
+    const names=moversFor(step).map(id=>CMAP[id].k);
+    if(!names.length) return "nothing";
+    return names.length===1 ? names[0]
+      : names.slice(0,-1).join(", ")+" and "+names[names.length-1];
   }
-
-  /* WORKED: the guided rung. Nothing is asked. The change happens, and every
-     number that moves is named. Added 260803 after Josh reported he was
-     "guessing at most of them and seeing how close I got" — every puzzle in
-     the build was cold, with no worked instance in front of it. */
-  if(step.type==="worked"){
-    panel.innerHTML=`<div class="kicker">Unit ${U+1} · worked example</div>
-      <h1>${step.title}</h1><div class="body">${step.setup}</div>`;
-    foot.innerHTML=`${backBtn()}<button class="btn" onclick="showWorked()">${step.button||"Watch what happens"}</button>`;
-    return;
-  }
-  panel.innerHTML=`<div class="kicker">Unit ${U+1} · puzzle ${S} of ${UNITS[U].steps.length-1}</div>
-    <div class="body">${step.q}</div>
-    <div class="opts" id="opts">${step.type==="choice"
-      ? step.opts.map((o,i)=>`<button class="opt" onclick="pick(${i})">${o}</button>`).join("") : ""}</div>`;
-  foot.innerHTML = backBtn() + (step.type==="select"
-    ? `<button class="btn" onclick="submitSel()">Submit</button>`
-    : `<span class="hint">Choose one</span>`);
+  const m=/^(after\.|d\.)?([a-z]+)$/.exec(tok);
+  if(!m || !CMAP[m[2]] || !step.state) return undefined;
+  const c=CMAP[m[2]], a=derive(step.state), b=derive(step.after||step.state);
+  if(m[1]==="after.") return fmtVal(c, b[m[2]]);
+  if(m[1]==="d.")     return fmtVal(c, Math.abs(b[m[2]] - a[m[2]]));
+  return fmtVal(c, a[m[2]]);
 }
-function showWorked(){
-  const step=UNITS[U].steps[S];
-  applyChange(step.state, step.after||step.state, step.still||[], step.stillLabel||"UNCHANGED");
-  document.getElementById("panel").insertAdjacentHTML("beforeend",
-    `<div class="body">${step.reveal}</div>`);
-  document.getElementById("foot").innerHTML =
-    `${backBtn()}<button class="btn" onclick="next()">Continue</button>`;
-}
-
-/* Back, asked for directly. Re-renders the step fresh so you can try it again
-   rather than landing on your old answer. */
-function backBtn(){
-  const atStart = (U===0 && S===0);
-  return `<button class="btn ghost" onclick="prev()"${atStart?" disabled":""}>Back</button>`;
-}
-function prev(){
-  if(U===0 && S===0) return;
-  S--;
-  if(S<0){ U--; S=UNITS[U].steps.length-1; }
-  save(); render();
-}
-function reveal(ok,step){
-  answered=true;
-  applyChange(step.state,step.after||step.state,step.still||[]);
-  const ask = (step.src||[]).includes("frs") ? `<div class="ask">${ASK_WORKSTAGE}</div>` : "";
-  const src = (step.src||[]).filter(k=>SRC[k]).map(k=>
-    `<details class="src"><summary>Where this comes from</summary><p>${SRC[k]}</p></details>`).join("");
-  document.getElementById("panel").insertAdjacentHTML("beforeend",
-    `<div class="verdict ${ok?'y':'n'}">${ok?"Correct":"Not quite"}</div>
-     <div class="body">${step.why}</div>${ask}${src}`);
-  const last = U===UNITS.length-1 && S===UNITS[U].steps.length-1;
-  document.getElementById("foot").innerHTML =
-    `${backBtn()}` + (last
-      ? `<button class="btn" onclick="restart()">Start again</button><span class="hint">End of units 1–3.</span>`
-      : `<button class="btn" onclick="next()">Continue</button>`);
-}
-function pick(i){
-  if(answered)return;
-  const step=UNITS[U].steps[S];
-  document.querySelectorAll("#opts .opt").forEach((b,j)=>{
-    b.disabled=true;
-    if(j===step.a)b.classList.add("right"); else if(j===i)b.classList.add("wrong");
+function expand(txt, step){
+  if(txt==null) return txt;
+  return String(txt).replace(/\{([A-Za-z][A-Za-z.]*)\}/g, (m,tok)=>{
+    const v = tokenValue(tok, step);
+    if(v===undefined) throw new Error("unresolved token "+m+" on step "+step.id);
+    return v;
   });
-  reveal(i===step.a,step);
 }
+
+/* ---------- progress. Keyed on stable string ids, never on position. ---------- */
+const KEY="mp_v4", SAVEV=4;
+let ST={}, HW=0;
+(function load(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(KEY)||"null");
+    /* accept any payload at or below this version and MIGRATE it rather than
+       dropping it. Progress is keyed on stable step ids, so carrying it
+       forward is safe; silently wiping weeks of three-minute sessions on a
+       version bump is not. */
+    if(raw && raw.st && typeof raw.v==="number" && raw.v<=SAVEV){
+      const known=new Set(ALLSTEPS.map(s=>s.id));
+      for(const k in raw.st) if(known.has(k)) ST[k]=raw.st[k];   // unknown ids dropped
+      HW = Math.min(Math.max(0, raw.hw|0), SECTIONS.length-1);
+    }
+  }catch(e){}
+})();
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify({v:SAVEV, st:ST, hw:HW})); }catch(e){} }
+function rec(id, patch){ ST[id]=Object.assign({}, ST[id], patch); save(); }
+
+const isScored = st => st.kind==="choice" || st.kind==="select" || st.kind==="compute";
+function secStat(i){
+  const steps=SECTIONS[i].steps;
+  const sc=steps.filter(isScored);
+  const right=sc.filter(s=>ST[s.id] && ST[s.id].a===1).length;
+  const seenAll=steps.every(s=>ST[s.id] && ST[s.id].v);
+  return {n:sc.length, right, seenAll, complete: seenAll && right===sc.length};
+}
+/* Unlocking is a HIGH-WATER MARK and is never revoked. It used to be
+   recomputed live, so backing into a finished section and fumbling one retry
+   re-locked everything downstream and the map rendered a green tick, the word
+   "Locked" and "finish the section above first" on the same row. */
+function bumpHW(){
+  for(let i=0;i<SECTIONS.length;i++) if(secStat(i).complete && i+1>HW) HW=Math.min(i+1,SECTIONS.length-1);
+  save();
+}
+const unlocked = i => i===0 || i<=HW || secStat(i-1).complete;
+function firstUnfinished(i){
+  const steps=SECTIONS[i].steps;
+  let found=-1;
+  for(let k=0;k<steps.length;k++){
+    const st=steps[k], r=ST[st.id];
+    if(!r || !r.v){ found=k; break; }
+    if(isScored(st) && r.a!==1){ found=k; break; }
+  }
+  if(found<0) return 0;
+  const st=steps[found], r=ST[st.id];
+  /* NEVER re-open on a question he has already got wrong. After a gap the
+     app's first act was to re-administer the test he failed, which is the
+     worst possible opening move for task initiation. Walk back to the nearest
+     teaching card in this section so he arrives warm and walks in on his own
+     momentum. */
+  if(isScored(st) && r && r.a===0){
+    for(let j=found-1;j>=0;j--)
+      if(steps[j].kind==="concept" || steps[j].kind==="worked") return j;
+  }
+  return found;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PART 5 — THE BOARD
+   Three visual channels, never crossed:
+     HUE           the direction the data moved (green up, red down,
+                   amber deliberately unchanged)
+     HEAVY BORDER  you chose this cell. Survives the reveal.
+     BADGE         right, wrong, missed. Achromatic on purpose, so it
+                   can sit on a red or green cell and still be read.
+   ═══════════════════════════════════════════════════════════════════ */
+const MASK="•••••";
+const $ = id => document.getElementById(id);
+let lastTrigger=null, lpTimer=null, suppressUntil=0;
+const CALC_IDS = CELLS.filter(c=>c.calc).map(c=>c.id);
+
+/* WHAT IS HIDDEN ON A QUESTION SCREEN, and why it changed.
+   v4.0 masked the whole board. That removed information the learner needed
+   and gave nothing back: on the two hardest questions in the app the answer
+   turns on the fee and the total expected cost, and v4.0 had both hidden and
+   neither restated in the question, so the only way through was to pattern-
+   match the worked example — which is the exact failure masking existed to
+   prevent. Now only the DASHED calculated cells are hidden. Showing the three
+   that arrive from outside the page leaks no answer anywhere, and it teaches
+   the section-1 distinction again on every question screen for free. */
+function maskSet(opt){
+  const vis=visibleIds(opt.layout);
+  if(opt.mask===true) return new Set(vis);
+  if(Array.isArray(opt.mask)) return new Set(opt.mask.filter(id=>vis.indexOf(id)>=0));
+  return new Set();
+}
+const hiddenCalc = layout => CALC_IDS.filter(id=>visibleIds(layout).indexOf(id)>=0);
+
+function drawBoard(state, opt){
+  clearTimeout(lpTimer);
+  const s=derive(state), L=LAYOUTS[opt.layout], hide=maskSet(opt);
+  let html='<div class="jobname">'+(s.name||"")+'</div>';
+  html += L.map(row=>'<div class="brow">'+row.map(x=>{
+    if(!CMAP[x]) return '<div class="op" aria-hidden="true">'+x+'</div>';
+    const c=CMAP[x], masked=hide.has(x);
+    const spoken = masked ? "value hidden for this question" : fmtVal(c,s[x]);
+    return '<div class="cell'+(c.calc?' calc':'')+(opt.tappable?' hasq':'')
+      + '" id="cell-'+x+'" data-id="'+x+'">'
+      + '<button type="button" class="cellhit" data-id="'+x+'" aria-label="'
+      + c.k+(c.sub?", "+c.sub:"")+", "+spoken+'"'
+      + (opt.tappable?' aria-pressed="false"':'')+'>'
+      + '<span class="k" aria-hidden="true">'+c.k+'</span>'
+      + (c.sub?'<span class="s" aria-hidden="true">'+c.sub+'</span>':'')
+      + '<span class="v'+(masked?' mask':'')+'" aria-hidden="true">'
+      + (masked?MASK:fmtVal(c,s[x]))+'</span></button>'
+      + (opt.tappable
+          ? '<button type="button" class="cellq" data-id="'+x+'" aria-label="What does '
+            + c.k+' mean?">?</button>'
+          : '')
+      + '</div>';
+  }).join("")+'</div>').join("");
+  $("board").innerHTML=html;
+  wireCells(!!opt.tappable);
+}
+
+function wireCells(tappable){
+  document.querySelectorAll("#board .cellq").forEach(b=>{
+    b.onclick=e=>{ e.stopPropagation(); showDef(b.dataset.id, b); };
+  });
+  document.querySelectorAll("#board .cellhit").forEach(b=>{
+    const id=b.dataset.id;
+    if(tappable){
+      /* On a select step the cell IS the answer control, and there is NO
+         long-press: a deliberate press was opening a definition instead of
+         choosing, which cost two taps and looked like the app ignoring you.
+         The "?" button, rendered only on these steps, is the definition path. */
+      b.onclick=()=>{
+        /* NO suppression guard here. The "?" is a sibling button that does not
+           bubble, and there is no long-press on this step, so nothing can have
+           legitimately armed a guard. The guard being global is what swallowed
+           the first tap after every definition lookup. */
+        const on=$("cell-"+id).classList.toggle("chosen");
+        b.setAttribute("aria-pressed", on?"true":"false");
+      };
+      return;
+    }
+    b.onclick=()=>{ if(Date.now()<suppressUntil) return; showDef(id,b); };
+    const start=()=>{ clearTimeout(lpTimer); lpTimer=setTimeout(()=>showDef(id,b),650); };
+    const stop =()=> clearTimeout(lpTimer);
+    b.addEventListener("touchstart",start,{passive:true});
+    ["touchend","touchmove","touchcancel","mouseup","mouseleave"].forEach(ev=>b.addEventListener(ev,stop));
+    b.addEventListener("mousedown",start);
+    b.addEventListener("contextmenu",e=>{ e.preventDefault(); showDef(id,b); });
+  });
+}
+
+function setCell(id, from, to, opt){
+  opt=opt||{};
+  const el=$("cell-"+id); if(!el) return;
+  const c=CMAP[id], a=derive(from), b=derive(to);
+  const d=b[id]-a[id], moved=Math.abs(d)>0.005;
+  const v=el.querySelector(".v");
+  if(v){ v.className="v"; v.textContent=fmtVal(c,b[id]); }
+  const hit=el.querySelector(".cellhit");
+  if(hit) hit.setAttribute("aria-label", c.k+(c.sub?", "+c.sub:"")+", "+fmtVal(c,b[id])
+    + (moved ? ", was "+fmtVal(c,a[id]) : ""));
+  el.classList.remove("up","down","still","flash");
+  void el.offsetWidth;
+  if(opt.direction!==false){
+    el.classList.add(moved ? (d>0?"up":"down") : "still", "flash");
+    if(!el.querySelector(".chip"))
+      el.insertAdjacentHTML("beforeend", moved
+        ? '<span class="chip '+(d>0?"up":"down")+'" aria-hidden="true">'+(d>0?"▲":"▼")+'</span>'
+        : '<span class="chip still" aria-hidden="true">'+(opt.stillLabel||"NO CHANGE")+'</span>');
+    if(moved && !el.querySelector(".was"))
+      el.insertAdjacentHTML("beforeend", '<span class="was" aria-hidden="true">was '+fmtVal(c,a[id])+'</span>');
+  } else {
+    el.classList.add("flash");
+  }
+}
+function badge(id, kind, text){
+  const el=$("cell-"+id); if(!el || el.querySelector(".badge")) return;
+  /* a judgement badge and a direction chip overlap by about a third of a cell
+     on a phone. At the moment of judgement the badge is the information; hue
+     and the "was" line still carry the direction. */
+  const chip=el.querySelector(".chip"); if(chip) chip.remove();
+  el.insertAdjacentHTML("beforeend", '<span class="badge '+kind+'" aria-hidden="true">'+text+'</span>');
+  const hit=el.querySelector(".cellhit");
+  if(hit) hit.setAttribute("aria-label",(hit.getAttribute("aria-label")||"")+". "
+    + text.replace(/[^A-Za-z ]/g,"").trim().toLowerCase());
+}
+
+/* ---------- definition dialog ---------- */
+const defOpen = () => $("defWrap").style.display==="flex";
+function showDef(id, trigger){
+  const c=CMAP[id]; if(!c||!c.def) return;
+  suppressUntil=Date.now()+400; lastTrigger=trigger||null;
+  $("defBody").innerHTML=c.def;
+  $("defWrap").style.display="flex";
+  $("defClose").focus();
+}
+function hideDef(){
+  $("defWrap").style.display="none";
+  if(lastTrigger && lastTrigger.focus) lastTrigger.focus();
+  lastTrigger=null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PART 6 — THE ENGINE
+   Nothing below needs editing to add, remove or reorder content.
+   ═══════════════════════════════════════════════════════════════════ */
+let view="map", SEC=0, S=0, answered=false, tries=0, warned=false, wIdx=0;
+
+const cur = () => SECTIONS[SEC].steps[S];
+const foot = h => { $("foot").innerHTML=h; };
+const primary = (label,fn,cls) =>
+  '<button class="btn '+(cls||"")+'" type="button" onclick="'+fn+'">'+label+'</button>';
+const ghost = (label,fn) =>
+  '<button class="btn ghost" type="button" onclick="'+fn+'">'+label+'</button>';
+/* step 0 used to render a dead disabled Back, leaving an 11px pill in the top
+   corner as the only exit. prevStep() already knew how to fall through. */
+const backBtn = () => S===0 ? ghost("All sections","goMap()") : ghost("Back","prevStep()");
+const lastStep = () => S >= SECTIONS[SEC].steps.length-1;
+
+function srcHTML(step){
+  return (step.src||[]).map(k=>{
+    const s=SRC[k]; if(!s) return "";
+    return s.callout
+      ? '<div class="confirm"><span class="h">'+s.h+'</span>'+s.t+'</div>'
+      : '<details class="src"><summary>Where this comes from</summary><p>'+s.t+'</p></details>';
+  }).join("");
+}
+function tallyHTML(){
+  const st=secStat(SEC);
+  return '<div class="tally">'+st.right+' of '+st.n+' answered correctly in this section</div>';
+}
+
+function render(){
+  if(view==="map") return renderMap();
+  const sec=SECTIONS[SEC], step=cur();
+  answered=false; tries=0; warned=false; wIdx=0;
+  $("map").style.display="none";
+  $("right").style.display="";
+  $("topbtn").style.display="";
+  const teaching = step.kind==="concept" || step.kind==="worked";
+  $("right").className = teaching ? "teach" : "ask";
+  const pos=(S+1)+" of "+sec.steps.length;
+  $("band").className="band "+(teaching?"teach":"ask");
+  $("band").textContent = step.kind==="concept" ? "Read · "+pos
+                        : step.kind==="worked"  ? "Watch · "+pos
+                        : "Your turn · "+pos;
+  window.scrollTo(0,0);
+
+  if(step.kind==="concept"){
+    $("left").style.display="none";
+    $("panel").innerHTML='<h1>'+expand(step.title,step)+'</h1>'
+      +'<div class="body">'+expand(step.body,step)+'</div>'+srcHTML(step);
+    foot(backBtn()+'<span class="spacer"></span>'
+      +primary(lastStep()?"Finish section":"Continue","nextStep()"));
+    return;
+  }
+  $("left").style.display="";
+
+  if(step.kind==="worked"){
+    drawBoard(step.state,{layout:sec.layout, mask:!!step.blank});
+    $("panel").innerHTML='<h1>'+expand(step.title,step)+'</h1>'
+      +'<div class="body" id="wtext">'+expand(step.setup,step)+'</div>';
+    foot(backBtn()+'<span class="spacer"></span>'
+      +primary(expand(step.button||"Follow it through",step),"showStage(0)"));
+    return;
+  }
+
+  /* A question already answered correctly re-opens as a REVIEW, not a re-test.
+     One stray tap while re-reading used to overwrite a correct answer. A tool
+     built to be consulted cannot only be taken. */
+  if(isScored(step) && ST[step.id] && ST[step.id].a===1) return reviewStep(step);
+
+  drawBoard(step.state,{layout:sec.layout, mask:hiddenCalc(sec.layout),
+                        tappable:step.kind==="select"});
+
+  if(step.kind==="choice"){
+    $("panel").innerHTML='<div class="body">'+expand(step.q,step)+'</div>'
+      +'<div class="opts" id="opts">'+step.opts.map((o,i)=>
+        '<button class="opt" type="button" onclick="pick('+i+')">'+expand(o,step)+'</button>').join("")
+      +'</div><div id="msg" role="status"></div>';
+    foot(backBtn()+'<span class="spacer"></span><span class="hint">Choose one</span>');
+    return;
+  }
+  if(step.kind==="select"){
+    $("panel").innerHTML='<div class="body">'+expand(step.q,step)+'</div>'
+      +'<div class="hint">Tap fields on the board above. Tap again to unselect. '
+      +'The <b>?</b> on each field explains what it means.</div>'
+      +'<div id="msg" role="status"></div>'
+      +'<button class="btn" type="button" onclick="submitSel()">Submit</button>';
+    foot(backBtn()+'<span class="spacer"></span>'+primary("Submit","submitSel()"));
+    return;
+  }
+  /* TYPED STEPS: the primary control is repeated IN THE PANEL, above the fold.
+     The fixed bottom bar sits underneath the iOS keyboard, and the Enter
+     fallback cannot fire because a decimal keypad has no Return key, so the
+     bar alone was a dead end on every typed question in the app. */
+  if(step.kind==="compute"){
+    $("panel").innerHTML='<div class="body">'+expand(step.q,step)+'</div>'
+      +'<input class="numin" id="numin" inputmode="decimal" enterkeyhint="go" autocomplete="off" '
+      +'aria-label="Your answer" placeholder="type your answer">'
+      +'<div class="hint">'+expand(step.hint||"",step)+'</div>'
+      +'<div id="msg" role="status"></div>'
+      +'<button class="btn" type="button" onclick="submitNum()">Check</button>';
+    foot(backBtn()+'<span class="spacer"></span>'+primary("Check","submitNum()"));
+    $("numin").addEventListener("keydown",e=>{ if(e.key==="Enter"){e.preventDefault();submitNum();} });
+    return;
+  }
+  if(step.kind==="explain"){
+    const prev=(ST[step.id]&&ST[step.id].txt)||"";
+    $("panel").innerHTML='<div class="body">'+expand(step.prompt,step)+'</div>'
+      +'<textarea class="txtin" id="txtin" aria-label="Your explanation" '
+      +'placeholder="Write it out. Nobody but you sees this.">'+prev+'</textarea>'
+      +'<div class="hint">There is no grade here, and skipping it blocks nothing. '
+      +'You compare your own words against a model answer.</div>'
+      +'<div id="msg" role="status"></div>'
+      +'<button class="btn dark" type="button" onclick="showModel()">Show the model answer</button>'
+      +ghost("Skip — it blocks nothing","skipExplain()");
+    foot(backBtn()+'<span class="spacer"></span>'+primary("Show the model answer","showModel()","dark"));
+    return;
+  }
+}
+
+function reviewStep(step){
+  answered=true;
+  revealBoard(step, []);
+  $("panel").innerHTML='<div class="verdict s" role="status">Answered</div>'
+    +'<div class="body">'+expand(step.q,step)+'</div>'
+    +'<div class="body">'+expand(step.why,step)+'</div>'+srcHTML(step);
+  foot(backBtn()+'<span class="spacer"></span>'+ghost("Try it again","retry()")
+    +primary(lastStep()?"Finish section":"Continue","nextStep()"));
+  window.scrollTo(0,0);
+}
+function retry(){ const step=cur(); ST[step.id]={v:1}; save(); render(); }
+
+/* ---------- worked examples: one stage per tap, text replaced ---------- */
+function showStage(i){
+  const sec=SECTIONS[SEC], step=cur();
+  wIdx=Math.max(0, Math.min(i, step.stages.length-1));
+  const reached=new Set();
+  for(let k=0;k<=wIdx;k++) (step.stages[k].cells||[]).forEach(id=>reached.add(id));
+  /* Any calculated cell not yet reached is masked. Mid-sequence the board used
+     to display arithmetic that contradicted the rule printed two lines above
+     it — EAC still reading its old total while JTD had already moved. */
+  const pending = visibleIds(sec.layout).filter(id=>CMAP[id].calc && !reached.has(id));
+  drawBoard(step.state,{layout:sec.layout, mask: step.blank ? true : pending});
+  for(let k=0;k<=wIdx;k++){
+    (step.stages[k].cells||[]).forEach(id=>{
+      if(step.blank) setCell(id, step.state, step.state, {direction:false});
+      else setCell(id, step.state, step.after||step.state, {stillLabel:step.stillLabel});
+    });
+  }
+  const st=step.stages[wIdx];
+  $("panel").innerHTML='<h1>'+expand(step.title,step)+'</h1>'
+    +'<div class="stagen">Step '+(wIdx+1)+' of '+step.stages.length+'</div>'
+    +'<div class="body fade">'+expand(st.text,step)+'</div>'
+    +(wIdx===step.stages.length-1 ? srcHTML(step) : "");
+  const back = wIdx===0 ? backBtn() : ghost("Back","showStage("+(wIdx-1)+")");
+  const next = wIdx < step.stages.length-1
+    ? primary("Next","showStage("+(wIdx+1)+")")
+    : primary(lastStep()?"Finish section":"Continue","nextStep()");
+  foot(back+'<span class="spacer"></span>'+next);
+  window.scrollTo(0,0);
+}
+
+/* ---------- grading. Answers are stored, not views. ---------- */
+function msg(html,cls){ const m=$("msg"); if(m) m.innerHTML='<div class="'+(cls||"warn")+'">'+html+'</div>'; }
+function grade(ok){
+  const step=cur();
+  answered=true;
+  rec(step.id,{a:ok?1:0, n:tries+1, v:1});
+  bumpHW();
+  return ok;
+}
+function verdictHTML(ok){
+  return '<div class="verdict '+(ok?"y":"n")+'" role="status">'+(ok?"Correct":"Not quite")+'</div>';
+}
+function revealBoard(step, keepChosen){
+  const sec=SECTIONS[SEC];
+  drawBoard(step.after||step.state,{layout:sec.layout});
+  if(step.mode!=="identify"){
+    const movers=moversFor(step);
+    movers.forEach(id=>setCell(id, step.state, step.after||step.state, {stillLabel:step.stillLabel}));
+    if(!movers.length && step.kind==="select")
+      visibleIds(sec.layout).forEach(id=>setCell(id, step.state, step.state,
+        {stillLabel:step.stillLabel||"NO CHANGE"}));
+  }
+  (keepChosen||[]).forEach(id=>{
+    const el=$("cell-"+id); if(!el) return;
+    el.classList.add("chosen");
+    const hit=el.querySelector(".cellhit");
+    if(hit) hit.setAttribute("aria-pressed","true");
+  });
+}
+function reveal(ok, step, keepChosen){
+  revealBoard(step, keepChosen);
+  $("panel").innerHTML = verdictHTML(ok)
+    + '<div class="body">'+expand(step.why,step)+'</div>'
+    + srcHTML(step) + tallyHTML();
+  foot(backBtn()+'<span class="spacer"></span>'
+    + (ok ? "" : ghost("Try it again","retry()"))
+    + primary(lastStep()?"Finish section":"Continue","nextStep()"));
+  window.scrollTo(0,0);
+}
+
+function pick(i){
+  if(answered) return;
+  const step=cur();
+  const btns=[...document.querySelectorAll("#opts .opt")];
+  if(i===step.a){
+    btns.forEach((b,j)=>{ b.disabled=true; if(j===step.a) b.classList.add("right"); });
+    btns[i].classList.add("chosen");
+    grade(true); return reveal(true, step);
+  }
+  if(tries===0){
+    tries=1; btns[i].disabled=true; btns[i].classList.add("wrong");
+    msg("Not quite. <b>One more try</b> — pick again.");
+    return;
+  }
+  btns.forEach((b,j)=>{ b.disabled=true;
+    if(j===step.a) b.classList.add("right"); else if(j===i) b.classList.add("wrong"); });
+  grade(false); reveal(false, step);
+}
+
 function submitSel(){
-  if(answered)return;
-  const step=UNITS[U].steps[S];
-  const got=[...document.querySelectorAll("#board .cell.picked")].map(e=>e.dataset.id).sort();
-  const want=[...step.a].sort();
-  reveal(got.length===want.length&&got.every((v,i)=>v===want[i]),step);
+  if(answered) return;
+  const step=cur();
+  const picked=[...document.querySelectorAll("#board .cell.chosen")].map(e=>e.dataset.id);
+  if(!picked.length && !warned){
+    warned=true;
+    msg("Nothing is selected. If you mean <b>none of them move</b>, tap Submit again and that is the answer you will give.");
+    return;
+  }
+  const want=answerIds(step);
+  const ok = picked.length===want.length && picked.slice().sort().join()===want.slice().sort().join();
+  if(!ok && tries===0){
+    tries=1; warned=true;
+    msg("Not quite. <b>One more try</b> — change your selection and submit again.");
+    return;
+  }
+  grade(ok);
+  reveal(ok, step, picked);
+  visibleIds(SECTIONS[SEC].layout).forEach(id=>{
+    const p=picked.includes(id), w=want.includes(id);
+    if(p&&w) badge(id,"right","✓ RIGHT");
+    else if(p&&!w) badge(id,"wrong","✗ WRONG");
+    else if(!p&&w) badge(id,"missed","○ MISSED");
+  });
 }
-function next(){
+
+function parseNum(raw){
+  let t=String(raw||"").trim().replace(/−/g,"-").replace(/[$,\s]/g,"")
+        .replace(/×/g,"*").replace(/÷/g,"/");
+  if(t.endsWith("%")) t=t.slice(0,-1);
+  let mult=1;
+  const suf=/^(-?[\d.]+)([kKmM])$/.exec(t);          // 80k, 1.2m — the notation people use
+  if(suf){ t=suf[1]; mult = /[kK]/.test(suf[2]) ? 1000 : 1000000; }
+  t=t.replace(/[xX]/g,"*");
+  if(!t) return NaN;
+  if(/^-?\d*\.?\d+$/.test(t)) return parseFloat(t)*mult;
+  if(/^[0-9+\-*/(). ]+$/.test(t)){
+    try{ const v=Function('"use strict";return ('+t+')')();
+      return (typeof v==="number" && isFinite(v)) ? v*mult : NaN; }catch(e){ return NaN; }
+  }
+  return NaN;
+}
+function submitNum(){
+  if(answered) return;
+  const step=cur(), el=$("numin"), raw=(el.value||""), n=parseNum(raw);
+  /* An unreadable entry is NOT an answer. It used to consume the retry and
+     then grade you wrong, so typing "100k" twice — the correct answer, twice —
+     was scored as a failure. */
+  if(isNaN(n)){
+    msg(raw.trim()
+      ? "That is not a number I can read. Digits are fine, and so is <b>80k</b>, or a sum like <b>40000+40000</b>. This does not count as a try."
+      : "Nothing typed yet. <b>Type an answer</b> — this does not count as a try.");
+    return;
+  }
+  const target=computeAnswer(step), c=CMAP[step.field];
+  const hadPct = raw.indexOf("%")>=0;
+  const ok = c.fmt==="pct"
+    ? (hadPct ? Math.abs(n-target*100)<=0.1
+              : (Math.abs(n-target*100)<=0.1 || Math.abs(n-target)<=0.001))
+    : Math.abs(n-target)<=1;
+  if(!ok && tries===0){
+    tries=1;
+    msg("Not quite. <b>One more try</b> — check the arithmetic and tap Check again.");
+    el.select();
+    return;
+  }
+  el.disabled=true; el.style.borderColor = ok?"var(--up)":"var(--down)";
+  grade(ok); reveal(ok, step);
+}
+
+/* ---------- constructed response. Self-scored, always skippable. ---------- */
+function skipExplain(){ rec(cur().id,{sk:1, v:1}); nextStep(); }
+function showModel(){
+  const step=cur();
+  const txt=($("txtin")&&$("txtin").value)||"";
+  rec(step.id,{txt:txt, v:1});
+  $("panel").innerHTML='<div class="verdict s" role="status">Compare</div>'
+    +'<div class="body">'+(txt.trim()
+        ? 'What you wrote:<br><br><i>'+txt.replace(/[<>]/g,"")+'</i>'
+        : 'You did not write anything. Read the model answer, then come back to this step when you want to try it cold.')+'</div>'
+    +'<div class="model"><div class="h">A model answer</div><ul>'
+      +step.model.map(m=>'<li>'+expand(m,step)+'</li>').join("")+'</ul></div>'
+    +'<div class="body">Did your own words cover those points?</div>'
+    +'<div class="opts" id="selfopts">'
+      +'<button class="opt" type="button" onclick="selfScore(1)">Covered it</button>'
+      +'<button class="opt" type="button" onclick="selfScore(0.5)">Covered some of it</button>'
+      +'<button class="opt" type="button" onclick="selfScore(0)">The model has things mine did not</button>'
+    +'</div><div id="msg" role="status"></div>';
+  foot(backBtn()+'<span class="spacer"></span>'
+    +primary(lastStep()?"Finish section":"Continue","nextStep()"));
+}
+function selfScore(v){
+  rec(cur().id,{self:v});
+  const btns=[...document.querySelectorAll("#selfopts .opt")];
+  btns.forEach(b=>b.disabled=true);
+  const idx = v===1?0 : v===0.5?1 : 2;
+  if(btns[idx]) btns[idx].classList.add("chosen");
+  msg("Noted. This is not scored and it changes nothing — it is for you.","hint");
+}
+
+/* ---------- the section map ---------- */
+function goMap(){ view="map"; render(); }
+function openSection(i){
+  if(!unlocked(i)) return;
+  SEC=i; S=firstUnfinished(i); view="sec"; render();
+}
+function resume(){
+  for(let i=0;i<SECTIONS.length;i++) if(unlocked(i) && !secStat(i).complete) return openSection(i);
+  openSection(SECTIONS.length-1);
+}
+function resetAll(){
+  if(!confirm("Clear all progress, including anything you have typed, and start again from the beginning?")) return;
+  ST={}; HW=0; save(); goMap();
+}
+function renderMap(){
+  view="map";
+  $("map").style.display="flex";
+  $("left").style.display="none";
+  $("right").style.display="none";
+  $("topbtn").style.display="none";
+  const totalSc=SECTIONS.reduce((n,s)=>n+s.steps.filter(isScored).length,0);
+  const rightSc=SECTIONS.reduce((n,s,i)=>n+secStat(i).right,0);
+  const touched=Object.keys(ST).length>0;
+  let html='<div class="maphead">How the firm counts money</div>'
+    +'<div class="mapsub">Every figure in here is invented and no real Buro Happold project appears.'
+    +'<br><b>'+rightSc+' of '+totalSc+' questions answered correctly.</b> '
+    +'It saves after every answer, so you can stop anywhere and lose nothing. '
+    +'You can retry any question as often as you like.</div>';
+  let lvl=null;
+  SECTIONS.forEach((s,i)=>{
+    if(s.level!==lvl){
+      lvl=s.level;
+      const cap = s.level===100 ? "what each number is"
+                : s.level===200 ? "what moves what"
+                : "billing, and what it does not do";
+      html+='<div class="lvlhead">'+s.level+' level <span>· '+cap+'</span></div>';
+    }
+    const st=secStat(i), lock=!unlocked(i);
+    const prog = lock ? "Locked"
+      : st.complete ? "All "+st.n+" correct"
+      : st.right+" of "+st.n+" correct";
+    html+='<button class="sec '+(lock?"locked":"")+' '+(st.complete?"done":"")
+      +' '+(!lock&&!st.complete?"now":"")+'" type="button"'+(lock?' disabled':'')
+      +' onclick="openSection('+i+')">'
+      +'<span class="secnum">'+(st.complete?"✓":i+1)+'</span>'
+      +'<span class="secbody"><span class="secname">'+s.name+'</span>'
+      +'<span class="secline">'+(lock?"Finish the section above first":s.line)
+      +' · '+s.steps.length+' steps</span></span>'
+      +'<span class="secprog">'+prog+'</span></button>';
+  });
+  /* Reset used to sit in the footer slot that says "Back" on every other
+     screen, on the screen he opens every single time. */
+  html+='<button class="resetlink" type="button" onclick="resetAll()">Start over from the beginning</button>';
+  $("map").innerHTML=html;
+  foot('<span class="spacer"></span>'+primary(touched?"Continue":"Start","resume()"));
+  window.scrollTo(0,0);
+}
+
+/* ---------- navigation ---------- */
+function prevStep(){ if(S>0){ S--; render(); } else goMap(); }
+function nextStep(){
+  /* "seen" means got to the end of, not glanced at. It used to be stamped on
+     paint, so a two-second look before a meeting counted as finished and the
+     step was skipped for ever after. */
+  rec(cur().id,{v:1});
+  bumpHW();
   S++;
-  if(S>=UNITS[U].steps.length){U++;S=0;}
-  if(U>=UNITS.length){U=UNITS.length-1;S=UNITS[U].steps.length-1;}
-  save();render();
+  if(S>=SECTIONS[SEC].steps.length){ goMap(); return; }
+  render();
 }
-function restart(){U=0;S=0;save();render();}
-render();
+
+/* ═══════════════════════════════════════════════════════════════════
+   PART 7 — THE SELF TEST
+   This runs before the app will start. A phone has no console, so a
+   stray backtick used to be a white screen. Now it is a red banner
+   naming the defect. The number audit is the important one: it expands
+   every sentence in the app and refuses to start if any money or
+   percentage figure in the prose is not a value derive() produced from
+   that step's own state. That is the mechanical guarantee that no
+   figure is ever typed twice.
+   ═══════════════════════════════════════════════════════════════════ */
+const SCAN_MONEY=/−?\$\d{1,3}(?:,\d{3})*(?:\.\d+)?/g, SCAN_PCT=/\d+(?:\.\d+)?%/g;
+const TOKENS=/\{([A-Za-z][A-Za-z.]*)\}/g;
+/* The allow-set is scoped to the TOKENS THIS SENTENCE ACTUALLY USES, not to
+   every value on the board. The board-wide version passed a figure that was
+   wrong for its sentence but happened to equal some other field on the same
+   step — which is precisely how a plausible wrong number survives review. */
+function allowedFigures(step, raw){
+  const out=new Set();
+  if(!step.state) return out;
+  const a=derive(step.state), b=derive(step.after||step.state);
+  if(raw===undefined){                       // whole-step set, kept for tooling
+    CELLS.forEach(c=>[a[c.id],b[c.id],Math.abs(b[c.id]-a[c.id])].forEach(v=>out.add(fmtVal(c,v))));
+    return out;
+  }
+  let m; TOKENS.lastIndex=0;
+  while((m=TOKENS.exec(String(raw)))!==null){
+    const tok=m[1];
+    if(tok==="FRAC" || tok==="FRAC.after"){
+      const s2 = tok==="FRAC" ? a : b;
+      out.add(money(s2.jtd)); out.add(money(s2.eac)); out.add(pctS(s2.pct));
+      continue;
+    }
+    const t=/^(after\.|d\.)?([a-z]+)$/.exec(tok);
+    if(!t || !CMAP[t[2]]) continue;
+    const c=CMAP[t[2]], f=t[2];
+    out.add(fmtVal(c, t[1]==="after." ? b[f] : t[1]==="d." ? Math.abs(b[f]-a[f]) : a[f]));
+  }
+  return out;
+}
+function stringsOf(step){
+  const out=[];
+  ["title","body","setup","button","q","hint","why","prompt"].forEach(k=>{ if(step[k]) out.push([k,step[k]]); });
+  (step.opts||[]).forEach((o,i)=>out.push(["opts["+i+"]",o]));
+  (step.model||[]).forEach((o,i)=>out.push(["model["+i+"]",o]));
+  (step.stages||[]).forEach((s,i)=>out.push(["stages["+i+"].text",s.text]));
+  return out;
+}
+function selfTest(){
+  const err=[], ids=new Set(), sids=new Set();
+  const KINDS=["concept","worked","choice","select","compute","explain"];
+  SECTIONS.forEach((sec,i)=>{
+    if(sids.has(sec.id)) err.push("duplicate section id: "+sec.id); sids.add(sec.id);
+    if(!LAYOUTS[sec.layout]) err.push(sec.id+": unknown layout "+sec.layout);
+    const vis=LAYOUTS[sec.layout]?visibleIds(sec.layout):[];
+    sec.steps.forEach(step=>{
+      const at=sec.id+" / "+step.id;
+      if(!step.id) err.push(at+": step has no id");
+      if(ids.has(step.id)) err.push("duplicate step id: "+step.id); ids.add(step.id);
+      if(KINDS.indexOf(step.kind)<0) err.push(at+": unknown kind "+step.kind);
+      (step.src||[]).forEach(k=>{ if(!SRC[k]) err.push(at+": unknown source key "+k); });
+      if(step.kind==="choice"){
+        if(!Array.isArray(step.opts)||step.opts.length<2) err.push(at+": needs at least two options");
+        else if(!(step.a>=0 && step.a<step.opts.length)) err.push(at+": answer index out of range");
+        if(!step.why) err.push(at+": no explanation");
+      }
+      if(step.kind==="select"){
+        if(!step.state) err.push(at+": select needs a state");
+        if(step.mode==="identify"){
+          if(!Array.isArray(step.ids)||!step.ids.length) err.push(at+": identify needs ids");
+          else step.ids.forEach(id=>{ if(vis.indexOf(id)<0) err.push(at+": id "+id+" is not on this section's board"); });
+        }
+        if(!step.why) err.push(at+": no explanation");
+      }
+      if(step.kind==="compute"){
+        if(!step.state||!CMAP[step.field]) err.push(at+": compute needs a state and a real field");
+        else if(!isFinite(computeAnswer(step))) err.push(at+": derived answer is not a finite number");
+        if(!step.why) err.push(at+": no explanation");
+      }
+      if(step.kind==="worked"){
+        if(!Array.isArray(step.stages)||!step.stages.length) err.push(at+": worked needs stages");
+        (step.stages||[]).forEach((s,k)=>(s.cells||[]).forEach(id=>{
+          if(vis.indexOf(id)<0) err.push(at+" stage "+(k+1)+": cell "+id+" is not on this section's board");
+        }));
+      }
+      if(step.kind==="explain" && (!Array.isArray(step.model)||!step.model.length))
+        err.push(at+": explain needs a model answer");
+      /* a compute step must TALK ABOUT the field it GRADES. Repointing the
+         field silently produced a build that asked for EAC, graded against
+         JTD, and marked the correct answer wrong — with a clean self-test. */
+      if(step.kind==="compute" && CMAP[step.field]){
+        /* The EXPLANATION must assert the graded field. Checking the question
+           was too weak: a question legitimately names its operands, so a step
+           asking for EAC and grading JTD still passed because {jtd} appears in
+           the stem. The `why` is where the answer is asserted, so that is
+           where the graded field has to appear. */
+        const f=step.field, refs=new RegExp("\\{(?:after\\.)?"+f+"\\}");
+        if(!refs.test(String(step.why||"")))
+          err.push(at+": grades the field "+f+" but its explanation never states {"+f+"}. "
+            + "The graded field and the described field have diverged.");
+      }
+      stringsOf(step).forEach(([k,raw])=>{
+        let out;
+        try{ out=expand(raw,step); }
+        catch(e){ err.push(at+" ."+k+": "+e.message); return; }
+        const allow=allowedFigures(step, raw);
+        (out.match(SCAN_MONEY)||[]).forEach(f=>{ if(!allow.has(f))
+          err.push(at+" ."+k+": the figure "+f+" is typed in, not derived. Use a token."); });
+        (out.match(SCAN_PCT)||[]).forEach(f=>{ if(!allow.has(f))
+          err.push(at+" ."+k+": the percentage "+f+" is typed in, not derived. Use a token."); });
+      });
+    });
+  });
+  return err;
+}
+function fail(title, lines){
+  const e=$("err"); if(!e) return;
+  e.style.display="block";
+  e.innerHTML='<b>'+title+'</b>'+(lines.length?'<ul>'+lines.map(l=>'<li>'+l+'</li>').join("")+'</ul>':"");
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  window.onerror=function(m,src,line){ fail("Something broke and the app stopped.",[m+" (line "+line+")"]); };
+  $("ver").textContent=BUILD;
+  $("defClose").onclick=hideDef;
+  $("defWrap").addEventListener("click",e=>{ if(e.target===$("defWrap")) hideDef(); });
+  document.addEventListener("keydown",e=>{
+    if(!defOpen()) return;
+    if(e.key==="Escape"){ hideDef(); return; }
+    /* the dialog had no containment: Shift+Tab landed on buttons hidden
+       underneath the overlay, which a keyboard user could then activate. */
+    if(e.key==="Tab"){ e.preventDefault(); $("defClose").focus(); }
+  });
+  const errs=selfTest();
+  if(errs.length){ fail("This build did not pass its own check, so it has not started. "+errs.length+" problem(s):", errs); return; }
+  render();
+}
+if(typeof window!=="undefined" && typeof document!=="undefined" && document.getElementById) boot();
+else if(typeof globalThis!=="undefined") globalThis.__MP={SECTIONS,CELLS,CMAP,LAYOUTS,SRC,derive,money,pctS,
+  fmtVal,visibleIds,moversFor,answerIds,computeAnswer,expand,selfTest,parseNum,BUILD,allowedFigures,stringsOf};
 </script>
 </body>
 </html>
