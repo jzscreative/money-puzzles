@@ -146,11 +146,21 @@ details.src summary::-webkit-details-marker{display:none}
 details.src summary::after{content:"▸";color:var(--line2);font-size:11px}
 details.src[open] summary::after{content:"▾"}
 details.src p{margin-top:7px;line-height:1.5}
-.tag{display:inline-block;font-size:8.5px;font-weight:750;letter-spacing:.07em;
-  padding:3px 7px;border-radius:4px;flex:0 0 auto}
-.tag.c{background:var(--upbg);color:var(--up);border:1px solid var(--upline)}
-.tag.u{background:var(--hotbg);color:var(--hot);border:1px solid var(--hotline)}
 .hint{font-size:13px;color:var(--dim)}
+.btn.ghost{background:transparent;color:var(--dim);border:1px solid var(--line2);font-weight:500;
+  padding:13px 16px}
+.btn.ghost:disabled{opacity:.35}
+.lphint{font-size:10.5px;color:var(--line2);text-align:center;margin-top:7px;letter-spacing:.02em}
+/* the ONE thing worth flagging is what to go and ask, not a taxonomy label */
+.ask{background:var(--hotbg);border:1px solid var(--hotline);border-radius:8px;
+  padding:10px 12px;font-size:13.5px;line-height:1.5;color:#4a3410}
+.ask b{color:#3a2708}
+/* press-and-hold definition */
+#defWrap{display:none;position:fixed;inset:0;background:rgba(14,21,29,.45);z-index:50;
+  align-items:center;justify-content:center;padding:24px}
+#defBox{background:var(--panel);border-radius:14px;padding:20px;max-width:420px;width:100%;
+  box-shadow:0 8px 40px rgba(14,21,29,.3);font-size:15px;line-height:1.55;color:#31414f}
+#defBox b{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
@@ -164,10 +174,20 @@ details.src p{margin-top:7px;line-height:1.5}
 </div>
 
 <div id="stage">
-  <div id="left"><div id="board"></div></div>
+  <div id="left">
+    <div id="board"></div>
+    <div class="lphint">Press and hold any field for a reminder of what it means</div>
+  </div>
   <div id="right">
     <div class="scroll" id="panel"></div>
     <div id="foot"></div>
+  </div>
+</div>
+
+<div id="defWrap" onclick="hideDef()">
+  <div id="defBox" onclick="event.stopPropagation()">
+    <div id="defBody"></div>
+    <button class="btn" style="margin-top:14px" onclick="hideDef()">Got it</button>
   </div>
 </div>
 
@@ -188,15 +208,24 @@ const money = n => (n<0?"−$":"$")+Math.round(Math.abs(n)).toLocaleString("en-U
 const pctS  = n => (n*100).toFixed(1)+"%";
 
 const CELLS=[
- {id:"fee",   k:"FEE",                                       f:s=>money(s.fee)},
- {id:"jtd",   k:"JTD COST",                                  f:s=>money(s.jtd)},
- {id:"etc",   k:"ETC COST",                                  f:s=>money(s.etc)},
- {id:"eac",   k:"EAC COST",  sub:"JTD + ETC",                f:s=>money(s.eac),   calc:1},
- {id:"pct",   k:"LIVE CALC % COMP", sub:"JTD ÷ EAC",         f:s=>pctS(s.pct),    calc:1},
- {id:"rev",   k:"CLAIMED REVENUE",  sub:"% COMP × FEE",      f:s=>money(s.rev),   calc:1},
- {id:"inv",   k:"INV",                                       f:s=>money(s.inv)},
- {id:"wip",   k:"WIP",       sub:"REVENUE − INV",            f:s=>money(s.wip),   calc:1},
- {id:"profit",k:"JTD PROFIT",sub:"REVENUE − JTD",            f:s=>money(s.profit),calc:1}
+ {id:"fee",   k:"FEE",                                       f:s=>money(s.fee),
+  def:"<b>Fee.</b> The price in the contract. What the client agreed to pay for the whole job. Entered by a person, and it does not move unless the contract changes."},
+ {id:"jtd",   k:"JTD COST",                                  f:s=>money(s.jtd),
+  def:"<b>Job to date cost.</b> Money already spent on this job: time booked to it, plus expenses. A fact, not an estimate. It comes off timesheets and invoices."},
+ {id:"etc",   k:"ETC COST",                                  f:s=>money(s.etc),
+  def:"<b>Estimate to complete.</b> Your forecast of what is still left to spend before the job finishes. <b>The only number on this board that is an opinion rather than a fact, and it is yours.</b>"},
+ {id:"eac",   k:"EAC COST",  sub:"JTD + ETC",                f:s=>money(s.eac),   calc:1,
+  def:"<b>Estimate at completion.</b> What the job is expected to cost in total, start to finish. Simply the money already spent plus your forecast of what is left."},
+ {id:"pct",   k:"LIVE CALC % COMP", sub:"JTD ÷ EAC",         f:s=>pctS(s.pct),    calc:1,
+  def:"<b>Live calculated percent complete.</b> Money spent, divided by money expected to be spent in total. <b>It is NOT how much of the work is finished.</b> Nothing on this board looks at the drawings."},
+ {id:"rev",   k:"CLAIMED REVENUE",  sub:"% COMP × FEE",      f:s=>money(s.rev),   calc:1,
+  def:"<b>Claimed revenue.</b> What the firm reports it has earned on this job so far. That percentage above, applied to the fee."},
+ {id:"inv",   k:"INV",                                       f:s=>money(s.inv),
+  def:"<b>Invoiced.</b> What has actually been billed to the client. Follows the payment schedule in the contract, which has nothing to do with the calculation above."},
+ {id:"wip",   k:"WIP",       sub:"REVENUE − INV",            f:s=>money(s.wip),   calc:1,
+  def:"<b>Work in progress.</b> Money the firm says it has earned but has not yet billed. The gap between the two."},
+ {id:"profit",k:"JTD PROFIT",sub:"REVENUE − JTD",            f:s=>money(s.profit),calc:1,
+  def:"<b>Job to date profit.</b> What the firm says it earned, minus what it actually spent."}
 ];
 const CMAP=Object.fromEntries(CELLS.map(c=>[c.id,c]));
 
@@ -213,9 +242,36 @@ function drawBoard(state,opts={}){
   if(opts.selectable){
     document.querySelectorAll("#board .cell").forEach(el=>{
       el.classList.add("sel");
-      el.onclick=()=>el.classList.toggle("picked");
+      el.onclick=()=>{ if(suppressClick){suppressClick=false;return;} el.classList.toggle("picked"); };
     });
   }
+  attachDefinitions();
+}
+
+/* ---- press and hold any field for a plain-English reminder ----
+   Asked for directly: "if you press and hold a field it will pop up a short
+   reminder what each is." Long-press rather than tap, because tap is already
+   how you select cells in the click-the-cells puzzles. */
+let lpTimer=null, suppressClick=false;
+function showDef(id){
+  const c=CMAP[id];
+  if(!c || !c.def) return;
+  suppressClick = true;
+  document.getElementById("defBody").innerHTML = c.def;
+  document.getElementById("defWrap").style.display = "flex";
+}
+function hideDef(){ document.getElementById("defWrap").style.display="none"; }
+function attachDefinitions(){
+  document.querySelectorAll("#board .cell").forEach(el=>{
+    const id = el.dataset.id;
+    const start = ()=>{ clearTimeout(lpTimer); lpTimer=setTimeout(()=>showDef(id), 420); };
+    const cancel = ()=>{ clearTimeout(lpTimer); };
+    el.addEventListener("touchstart", start, {passive:true});
+    ["touchend","touchmove","touchcancel","mouseup","mouseleave"].forEach(ev=>
+      el.addEventListener(ev, cancel));
+    el.addEventListener("mousedown", start);
+    el.addEventListener("contextmenu", e=>{ e.preventDefault(); showDef(id); });
+  });
 }
 function applyChange(from,to,alsoStill=[]){
   const a=derive(from),b=derive(to);
@@ -239,14 +295,16 @@ function applyChange(from,to,alsoStill=[]){
    flaw in Duolingo's chess course is that a puzzle cannot be reviewed.
    Sources collapse to one line and open on tap.
    ===================================================================== */
+/* Provenance is kept but no longer shouted. Josh, 260803: the CONFIRMED /
+   NOT CONFIRMED chips "did not seem useful", the explanation text is.
+   He is right at this stage: a confidence label he cannot act on is noise.
+   So the flag survives only where it changes what he would DO, rendered as
+   a question to go and ask rather than a taxonomy tag. */
 const SRC={
- formula:{t:"c",h:"The revenue formula · internal deck, slide 39",
-   s:"Stated on slide 39 of an official internal deck: revenue equals cost spent to date, divided by total cost expected by the end, multiplied by fee."},
- frs:{t:"u",h:"Whether this holds workstage by workstage",
-   s:"NOT CONFIRMED. Under the accounting standard adopted across the firm in 2026, nobody in finance has confirmed whether the formula above still applies at the individual workstage level. A workstage is the sub-code within a job that hours and costs book to. Treat the shape as right and the fine print as open."},
- names:{t:"c",h:"The nine column names · the real monthly report",
-   s:"These are the actual column names off the monthly report, not plainer substitutes. They are the words used in the room, which is why the board uses them."}
+ formula:"Slide 39 of an official internal deck states it: revenue equals cost spent to date, divided by total cost expected by the end, multiplied by the fee.",
+ names:"These are the real column names off the monthly report, not plainer substitutes. They are the words used in the room."
 };
+const ASK_WORKSTAGE = "<b>Worth checking before you repeat this to anyone.</b> Nobody in finance has confirmed whether this calculation runs once across the whole job, or separately for each workstage (the sub-code that hours and costs book to). The shape is right; that detail is open. The question to ask: <i>\"Does percent complete run per workstage, or across the whole job?\"</i>";
 
 const UNITS=[
 {name:"The board", steps:[
@@ -283,7 +341,7 @@ const UNITS=[
 
  {type:"select",state:BASE,after:BASE,
   still:["fee","jtd","etc","eac","pct","rev","inv","wip","profit"],
-  q:"You issue the complete drawing set today. A major milestone, delivered.<br><br><b>Tap every cell that moves. If none do, tap nothing and submit anyway.</b>",
+  q:"You issue the complete drawing set today. A major milestone, delivered.<br><br><b>In the board above, tap every field that moves.</b> If none do, tap nothing and submit anyway.",
   a:[],
   why:"<b>Nothing moved.</b> Not one cell.<br><br>Issuing the drawings changed no cost, so it changed no revenue. The board has nowhere to record that it happened.<br><br>This is why a job can feel finished and report as though it is not.",
   src:["formula"]},
@@ -312,7 +370,7 @@ const UNITS=[
   src:["formula","frs"]},
 
  {type:"select",state:BASE,after:{...BASE,etc:60000},still:["jtd"],
-  q:"Same move. ETC COST goes from $40,000 to $60,000.<br><br><b>Tap every cell that moves.</b>",
+  q:"Same move. ETC COST goes from $40,000 to $60,000.<br><br><b>In the board above, tap every field that moves.</b>",
   a:["etc","eac","pct","rev","wip","profit"],
   why:"Six cells move. <b>JTD COST does not</b>, and that is the cell to watch.<br><br>Money actually spent is unchanged. Work delivered is unchanged. The client is unchanged. Reported income fell $10,000 anyway.",
   src:["formula","frs"]},
@@ -329,7 +387,7 @@ const UNITS=[
 ]}];
 
 /* ===================== engine ===================== */
-const BUILD="v2.1 · built 260803 0025 ET";
+const BUILD="v2.2 · built 260803 0850 ET";
 document.getElementById("ver").textContent="units 1–3 · "+BUILD;
 let U=0,S=0,answered=false;
 try{const sv=JSON.parse(localStorage.getItem("mp_v2")||"null");if(sv){U=sv.U;S=sv.S;}}catch(e){}
@@ -349,29 +407,43 @@ function render(){
   if(step.type==="concept"){
     panel.innerHTML=`<div class="kicker">Unit ${U+1} · ${UNITS[U].name}</div>
       <h1>${step.title}</h1><div class="body">${step.body}</div>`;
-    foot.innerHTML=`<button class="btn" onclick="next()">Start</button>`;
+    foot.innerHTML=`${backBtn()}<button class="btn" onclick="next()">Start</button>`;
     return;
   }
   panel.innerHTML=`<div class="kicker">Unit ${U+1} · puzzle ${S} of ${UNITS[U].steps.length-1}</div>
     <div class="body">${step.q}</div>
     <div class="opts" id="opts">${step.type==="choice"
       ? step.opts.map((o,i)=>`<button class="opt" onclick="pick(${i})">${o}</button>`).join("") : ""}</div>`;
-  foot.innerHTML = step.type==="select"
-    ? `<button class="btn" onclick="submitSel()">Submit</button><span class="hint">Tap cells on the board above</span>`
-    : `<span class="hint">Choose one</span>`;
+  foot.innerHTML = backBtn() + (step.type==="select"
+    ? `<button class="btn" onclick="submitSel()">Submit</button>`
+    : `<span class="hint">Choose one</span>`);
+}
+/* Back, asked for directly. Re-renders the step fresh so you can try it again
+   rather than landing on your old answer. */
+function backBtn(){
+  const atStart = (U===0 && S===0);
+  return `<button class="btn ghost" onclick="prev()"${atStart?" disabled":""}>Back</button>`;
+}
+function prev(){
+  if(U===0 && S===0) return;
+  S--;
+  if(S<0){ U--; S=UNITS[U].steps.length-1; }
+  save(); render();
 }
 function reveal(ok,step){
   answered=true;
   applyChange(step.state,step.after||step.state,step.still||[]);
-  const src=(step.src||[]).map(k=>{const s=SRC[k];
-    return `<details class="src"><summary><span class="tag ${s.t}">${s.t==="c"?"CONFIRMED":"NOT CONFIRMED"}</span>${s.h}</summary><p>${s.s}</p></details>`;}).join("");
+  const ask = (step.src||[]).includes("frs") ? `<div class="ask">${ASK_WORKSTAGE}</div>` : "";
+  const src = (step.src||[]).filter(k=>SRC[k]).map(k=>
+    `<details class="src"><summary>Where this comes from</summary><p>${SRC[k]}</p></details>`).join("");
   document.getElementById("panel").insertAdjacentHTML("beforeend",
     `<div class="verdict ${ok?'y':'n'}">${ok?"Correct":"Not quite"}</div>
-     <div class="body">${step.why}</div>${src}`);
+     <div class="body">${step.why}</div>${ask}${src}`);
   const last = U===UNITS.length-1 && S===UNITS[U].steps.length-1;
-  document.getElementById("foot").innerHTML = last
-    ? `<button class="btn" onclick="restart()">Start again</button><span class="hint">End of units 1–3.</span>`
-    : `<button class="btn" onclick="next()">Continue</button>`;
+  document.getElementById("foot").innerHTML =
+    `${backBtn()}` + (last
+      ? `<button class="btn" onclick="restart()">Start again</button><span class="hint">End of units 1–3.</span>`
+      : `<button class="btn" onclick="next()">Continue</button>`);
 }
 function pick(i){
   if(answered)return;
