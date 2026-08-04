@@ -10,6 +10,9 @@
 <meta name="apple-mobile-web-app-title" content="Money Puzzles">
 <meta name="theme-color" content="#f4f6f9">
 <meta name="robots" content="noindex, nofollow">
+<!-- P4-14 · with no icon, the home-screen tile was an auto-screenshot of a
+     white page. This is a plain 180x180 PNG, no manifest needed for iOS. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Money Puzzles</title>
 <style>
 /* LIGHT MODE IS FORCED. There is deliberately no prefers-color-scheme block.
@@ -108,10 +111,19 @@ h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
 .was{display:block;font-size:10.5px;color:var(--body);font-weight:650;margin-top:-2px;
   padding:0 10px 8px 9px;line-height:1.3}
 .cell.hasq .was{padding-right:32px}
-.cellq{position:absolute;right:4px;bottom:4px;width:26px;height:26px;border-radius:99px;
-  border:1.5px solid var(--rule);background:var(--panel);color:var(--dim);font-size:12px;
-  font-weight:750;cursor:pointer;line-height:1;display:flex;align-items:center;
-  justify-content:center;padding:0}
+/* P4-7 · the "?" sat inside a 26px box on top of the 58px .cellhit button
+   underneath it. A thumb that missed the 26px target did not do nothing — it
+   landed on .cellhit instead and silently added a wrong cell to the answer.
+   The BUTTON's own hit area is now 44px (right:-9px;bottom:-9px expands it
+   9px past where the 26px circle used to sit, in every direction: 26+9+9=44),
+   while ::before draws the circle back down to the original 26px, centred
+   inside that 44px box, so nothing about the visual changes. */
+.cellq{position:absolute;right:-9px;bottom:-9px;width:44px;height:44px;
+  border:0;background:none;color:var(--dim);font-size:12px;font-weight:750;
+  cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;
+  padding:0;z-index:2}
+.cellq::before{content:"";position:absolute;inset:9px;border-radius:99px;
+  border:1.5px solid var(--rule);background:var(--panel)}
 .op{display:flex;align-items:center;justify-content:center;color:var(--body);
   font-size:clamp(15px,4vw,19px);font-weight:650;flex:0 0 auto;padding:0 1px}
 
@@ -135,12 +147,28 @@ h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
 .rp{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1.5px solid var(--cellline);
   border-radius:10px;background:var(--panel)}
 .rp table{border-collapse:separate;border-spacing:0;font-size:12.5px;white-space:nowrap;width:100%}
-.rp th,.rp td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right}
+/* P4-1(c) · 13px padding puts every row at a 44px pitch — the real page's
+   rows are a tap target now that rowpick makes them tappable, not just text. */
+.rp th,.rp td{padding:13px 10px;border-bottom:1px solid var(--line);text-align:right}
 .rp tr:last-child td{border-bottom:0}
+/* P4-1(a) · headers were the widest content in every column — a header like
+   "LIVE CALCULATED % COMP" forced the whole column wide even though every
+   money value under it is a third that width. Letting headers wrap drops the
+   table from 1,025px to roughly 810px on a five-column layout and changes
+   nothing about the one-layout rule: nothing reflows, nothing hides. */
 .rp th{font-size:9px;letter-spacing:.04em;text-transform:uppercase;color:var(--dim);
-  font-weight:800;background:var(--calc);line-height:1.25}
+  font-weight:800;background:var(--calc);line-height:1.3;white-space:normal;
+  vertical-align:bottom}
+/* P4-1(b) · the job-name column is now a FIXED width, wrapped rather than
+   nowrap. Two things this buys: the column itself stops being the single
+   widest thing on the page ("Alderman Street Rooms" no longer forces 180px+
+   of nowrap text), and — P4-1(c) — because the width is fixed rather than
+   content-driven, inserting the right/wrong/missed mark at reveal time can
+   never change the column's rendered width, so the frozen first column
+   cannot jump sideways the moment the answer is shown. */
 .rp .jn{text-align:left;position:sticky;left:0;background:var(--panel);font-weight:700;
-  border-right:1.5px solid var(--cellline);z-index:1;font-size:12.5px;white-space:nowrap}
+  border-right:1.5px solid var(--cellline);z-index:1;font-size:12.5px;
+  white-space:normal;width:130px;min-width:130px;max-width:130px}
 .rp th.jn{background:var(--calc);z-index:2}
 .rp tbody tr{cursor:pointer}
 .rp tr.pick td{background:var(--accbg)}
@@ -148,8 +176,11 @@ h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
 .rp tr.rr td,.rp tr.rr .jn{background:var(--upbg)}
 .rp tr.rw td,.rp tr.rw .jn{background:var(--downbg)}
 .rp tr.rm td,.rp tr.rm .jn{background:var(--stillbg)}
-.rpmark{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.05em;
-  margin-left:7px;padding:2px 6px;border-radius:99px;background:var(--judge);color:#fff}
+/* P4-1(c), continued: the mark sits on its own line under the name, inside
+   the now-fixed-width cell, instead of trying to share the name's line and
+   overflow it. */
+.rpmark{display:block;width:fit-content;font-size:9px;font-weight:800;letter-spacing:.05em;
+  margin-top:4px;padding:2px 6px;border-radius:99px;background:var(--judge);color:#fff}
 .rpmark.missed{background:var(--panel);color:var(--judge);border:1.5px dashed var(--judge)}
 .rpmark.wrong{background:var(--panel);color:var(--judge);border:1.5px solid var(--judge)}
 .rphint{font-size:12px;color:var(--dim);text-align:center;margin-top:8px}
@@ -159,10 +190,21 @@ h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
   letter-spacing:.04em;text-transform:uppercase;color:var(--dim);
   background:var(--calc);border:1px solid var(--line);border-radius:8px;
   padding:8px 11px;margin-bottom:7px}
+/* P4-6/P4-7 · Clear is the ONLY undo in the app. A 34px target on the one
+   control that reverses a mis-tap is exactly the wrong place to be tight. */
 .mode .clr{margin-left:auto;background:none;border:0;color:var(--acc);font-weight:700;
   font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;
-  text-decoration:underline;padding:6px;min-height:34px}
-.badge{position:absolute;top:-9px;left:6px;font-size:9px;font-weight:800;padding:3px 7px;
+  text-decoration:underline;padding:10px 8px;min-height:44px;min-width:44px}
+/* P4-2 · the badge used to sit at top:-9px, sharing the chip's row with wide
+   text on both sides, so on a narrow cell the two collided and badge() simply
+   deleted the chip out from under itself — the three-channel scheme (colour +
+   direction chip + judgement badge) silently dropped to two on every
+   correctly-chosen cell that moved. The badge already anchored left and the
+   chip already anchored right; what overlapped was the SHARED top edge. Move
+   the badge to the bottom edge instead — diagonally opposite the chip — so
+   the two can never collide regardless of how wide either one's text is, and
+   the chip no longer has to be removed. */
+.badge{position:absolute;bottom:-9px;left:6px;font-size:9px;font-weight:800;padding:3px 7px;
   border-radius:99px;letter-spacing:.05em;white-space:nowrap;
   background:var(--judge);color:#fff;border:1.5px solid var(--judge)}
 .badge.missed{background:var(--panel);color:var(--judge);border-style:dashed}
@@ -172,7 +214,18 @@ h1{font-size:19px;line-height:1.3;font-weight:650;letter-spacing:-.015em}
 .flash{animation:flash .4s ease}
 @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .fade{animation:fadein .28s ease}
-@media(prefers-reduced-motion:reduce){.flash,.fade{animation:none}}
+/* P4-3 · STAGE THE REVEAL. About twenty things used to become visible in one
+   frame, including a vertical reflow from every "was $X" line landing at
+   once. The underlying DOM state still updates SYNCHRONOUSLY — screen readers
+   and this file's own test suite both need the real values the instant they
+   exist, so nothing here delays data, only its entrance animation. Each cell
+   touched by a reveal gets an animation-delay set at draw time, in board
+   order, roughly 120ms apart, so a sighted reader's eye is drawn across the
+   board the way a hand would move across it rather than seeing it change all
+   at once. The verdict bar is a separate element and is never delayed. */
+@keyframes revealin{from{opacity:0}to{opacity:1}}
+.chip,.badge,.was{opacity:0;animation:revealin .22s ease forwards}
+@media(prefers-reduced-motion:reduce){.flash,.fade,.chip,.badge,.was{animation:none;opacity:1}}
 
 /* ---------- verdict ---------- */
 .verdict{margin:-14px -14px 2px;padding:13px 14px;font-size:20px;font-weight:800;
@@ -232,10 +285,12 @@ details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
 #map{width:100%;max-width:680px;padding:16px 0 20px;display:flex;flex-direction:column;gap:10px}
 .maphead{font-size:21px;font-weight:700;letter-spacing:-.015em}
 .mapsub{font-size:14px;color:var(--body);line-height:1.55}
-.lvlhead{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
-  font-weight:800;margin-top:14px}
-.lvlhead span{color:var(--body);font-weight:600;letter-spacing:.01em;text-transform:none;font-size:12.5px}
-.sec{display:flex;align-items:center;gap:12px;background:var(--panel);border:1.5px solid var(--line);
+/* P4-10 · .lvlhead deleted (see renderMap()). .sec's border moved off --line
+   (decorative-dividers-only, 1.2:1 against the page) onto --cellline, the
+   token this file already reserves for operable-component boundaries and
+   measures at 3.25:1 — without it, all eight tap targets on the map had
+   effectively no visible edge outdoors. */
+.sec{display:flex;align-items:center;gap:12px;background:var(--panel);border:1.5px solid var(--cellline);
   border-radius:11px;padding:13px 14px;cursor:pointer;text-align:left;width:100%;min-height:66px}
 .sec.locked{cursor:default;background:#eef1f5}
 .sec.done{border-color:var(--upline)}
@@ -247,6 +302,11 @@ details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
 .secbody{flex:1 1 auto;min-width:0}
 .secname{display:block;font-size:15.5px;font-weight:700;letter-spacing:-.01em;color:var(--ink)}
 .secline{display:block;font-size:13px;color:var(--dim);margin-top:2px;line-height:1.4}
+/* P4-10 · a 3px progress bar per row, replacing some of the vertical space
+   .lvlhead used to cost. */
+.secbar{display:block;height:3px;border-radius:99px;background:var(--line);margin-top:7px;overflow:hidden}
+.secbar span{display:block;height:100%;background:var(--acc);border-radius:99px}
+.sec.done .secbar span{background:var(--up)}
 .secprog{font-size:11.5px;color:var(--dim);font-weight:750;flex:0 0 auto;white-space:nowrap;
   text-align:right;max-width:82px;line-height:1.3}
 
@@ -257,13 +317,21 @@ details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
   font-weight:600;text-decoration:underline;cursor:pointer;padding:12px;min-height:44px}
 #foot{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);
   border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;
-  padding:11px 14px calc(11px + env(safe-area-inset-bottom));min-height:var(--footh)}
+  /* P4-13 · left/right are safe-area-aware so the Back button and Continue
+     don't slide under a notched phone's sensor housing or the home-indicator
+     curve in landscape. env() falls back to 0 on devices with no notch. */
+  padding:11px calc(14px + env(safe-area-inset-right)) calc(11px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
+  min-height:var(--footh)}
 #foot .spacer{flex:1 1 auto}
 .btn{background:var(--acc);color:#fff;border:0;padding:13px 22px;border-radius:9px;
   font-weight:700;font-size:15.5px;cursor:pointer;min-height:50px}
 .btn.ghost{background:transparent;color:var(--dim);border:1.5px solid var(--rule);font-weight:600;
   padding:13px 16px}
 .btn.dark{background:var(--judge)}
+/* "Try it again" lives in the panel now, not in the fixed action bar ten pixels
+   from Continue. Full width and its own row, so a thumb aiming at Continue
+   cannot land on it. */
+.retryb{align-self:flex-start;margin-top:2px}
 .btn:disabled{opacity:.4;cursor:default}
 
 /* ---------- definition dialog ---------- */
@@ -1271,7 +1339,42 @@ const SECTIONS=[
    no figure off any real report reaches this file, ever. */
 {id:"real", level:700, layout:"real", bare:true,
  name:"The Real Page",
- line:"Report order, nothing annotated, and one column missing",
+ line:"Report order, nothing annotated, and one column covered up",
+ /* P3-4 · this level had NO warm-up pool and has the highest prior-knowledge
+    demand in the file: it asks him to read an unannotated page using every
+    idea from the six levels before it. The four below run on the real board,
+    bare, on the invented rows this level already uses. */
+ warmN:2,
+ warm:[
+ {id:"real.warm.parts", kind:"select", mode:"identify", state:R_ALDER, showall:true,
+  ids:["time","subs"],
+  q:"Warm-up, on the real page. <b>Tap the two fields that add up to JTD COST.</b>",
+  why:"<b>TIME COST and SUBS &amp; EXP.</b> {time} of hours, plus {subs} of sub-consultants and expenses, is {jtd} spent to date.<br><br>On the real report that total is printed for you, at column 15. Being able to rebuild it is what tells you those three columns are one idea."},
+
+ {id:"real.warm.jtd", kind:"compute", state:R_ELMGROVE, field:"jtd", showall:true,
+  q:"Warm-up. <b>{job}</b>, in report order.<br><br>JTD COST is covered up on this row. What is it?",
+  hint:"two of the columns in front of you, added together",
+  why:"<b>{jtd}.</b> TIME COST of {time} plus SUBS &amp; EXP of {subs}.<br><br>Everything else on the row hangs off it: {pct} is that figure over {eac}, and JTD PROFIT of {profit} is the claim of {rev} minus it."},
+
+ {id:"real.warm.margin", kind:"choice", state:R_DUNMORE, showall:true,
+  q:"Warm-up. <b>{job}</b> has a fee of <b>{fee}</b> and expects to cost <b>{eac}</b> in total.<br><br>What does that tell you before you read another column?",
+  opts:["It will lose money, because it expects to cost more than the {fee} it is being paid",
+        "It will make about {wip}, which is the gap it has not billed yet",
+        "Nothing yet, because {jtd} has not been spent in full",
+        "It is on target, because {eac} is close to the {fee} fee"],
+  a:0,
+  why:"<b>It will lose money.</b> Expected cost of {eac} is above the {fee} fee, so the most it can ever claim is less than it will have spent. JTD PROFIT reads {profit}, and it got there without anybody doing anything wrong this month.<br><br>Fee against expected cost is the first pair to read on any row."},
+
+ {id:"real.warm.wip", kind:"choice", state:R_BRAMBLE, showall:true,
+  q:"Warm-up. <b>{job}</b> has claimed <b>{rev}</b> and billed <b>{inv}</b>.<br><br>What is the {wip} in its WIP column?",
+  opts:["Money the firm says it has earned and has not yet asked the client for",
+        "Money the client has been billed for and has not paid",
+        "Money the job is expected to lose by the time it finishes",
+        "Money held back as contingency against the {fee} fee"],
+  a:0,
+  why:"<b>Claimed, not yet billed.</b> {rev} claimed minus {inv} billed is {wip}.<br><br>Billed and unpaid is a different column again, UNPAID INV, which this board does not carry. And it says nothing on its own about whether the job is profitable: this one is making {profit}.",
+  src:["wip"]}
+ ],
  steps:[
 
  {id:"real.intro", kind:"concept",
@@ -1279,11 +1382,38 @@ const SECTIONS=[
   body:"Everything so far has been one job opened out, in the order the numbers are calculated, with each formula printed under its name and a <b>?</b> on every field.<br><br><b>None of that scaffolding exists on the real report.</b><br><br>From here the board switches to the real column order, the formulas come off, and the <b>?</b> goes away.<br><br>Two columns you have not seen appear. <b>TIME COST</b> is the cost of the hours booked to the job: everybody's hours, priced at their internal rate. <b>SUBS &amp; EXP</b> is everything spent that is not somebody's hours, so sub-consultant invoices, travel, printing, equipment. Added together, those two are the job's cost to date.<br><br>Which brings up the one you have leaned on all the way through. <b>JTD COST is printed on the real report</b>, at column 15, sitting directly between SUBS &amp; EXP and ETC COST. It is <b>covered up on this board, once</b>, so you can prove to yourself that you can rebuild it out of the two columns it is made of.<br><br>None of this is a trick. It is the same arithmetic, laid out the way the thing on your screen at seven in the morning lays it out.<br><br>Every job and every figure from here on is invented.",
   src:["report"]},
 
- /* THE item. If only one thing in this level survives, it is this one: it is
-    the only screen in the app shaped like the artifact. */
- {id:"real.find", kind:"rowpick", rows:REALROWS, ids:[2,4],
-  q:"Five jobs, real column order, nothing annotated. It scrolls sideways.<br><br><b>Tap the one claiming a lot it has not billed. Then tap the one that is going to lose money.</b>",
-  why:"<b>{r2.name} and {r4.name}.</b><br><br><b>{r2.name}</b> has claimed {r2.rev} and billed only {r2.inv}, so WIP is {r2.wip}. That is money the firm says it has earned and has not yet asked for. It is the widest gap on the page by a distance. It is a <i>cash</i> question, not a profit one: that job is making {r2.profit}.<br><br><b>{r4.name}</b> is the one losing money. Its fee is {r4.fee} and it now expects to cost {r4.eac}. The expected cost is above the fee, so JTD PROFIT is {r4.profit}.<br><br>Two completely different problems, and neither one shows in the other's column. {r4.name}'s WIP is {r4.wip}, almost nothing, which on a fast scan looks like the healthiest row on the page.",
+ /* THE item. If only one thing in this level survives, it is one of these two:
+    the only screens in the app shaped like the artifact.
+    P2-8 / P4-1(b) · THIS WAS ONE STEP, "real.find", asking for both judgements
+    at once (ids:[2,4]) under one shared retry. Two problems, both found by the
+    260803 review: it graded two independent judgements as a single pass/fail,
+    so getting one right and one wrong read as one failure with no way to know
+    which; and on a 348px phone the two columns it asks you to compare, WIP and
+    JTD PROFIT, sit 371px apart and can never be on screen together — a bad
+    match for a stated short-term-memory constraint. Splitting into two single-
+    column rowpick items fixes both at once: each is graded on its own, and
+    each is a vertical scan of ONE column down five rows, not a horizontal
+    comparison of two. Do NOT turn the five jobs into cards — cards would be
+    legible and would erase the only thing this item exists to teach: the real
+    page does not lay itself out for you. */
+ /* P4-8 · bare mode strips the "?" glossary from the board — correctly, that
+    is what bare mode is for — but real.intro was the ONLY place TIME COST and
+    SUBS & EXP got defined at all, and a level with no warm-up pool (P3-4) is
+    read once and not necessarily remembered by the time this item opens. Do
+    NOT restore the "?" on the board; that would leak bare mode. A collapsed,
+    closed-by-default disclosure in the panel body is not the board, costs
+    nothing when unopened, and gives the definitions a second, deliberately
+    reachable home. */
+ {id:"real.find.wip", kind:"rowpick", rows:REALROWS, ids:[2],
+  q:"Five jobs, real column order, nothing annotated. It scrolls sideways.<br><br><b>Tap the one claiming a lot it has not billed.</b>",
+  why:"<b>{r2.name}.</b> It has claimed {r2.rev} and billed only {r2.inv}, so WIP is {r2.wip}. That is money the firm says it has earned and has not yet asked for. It is the widest gap on the page by a distance, and it is a <i>cash</i> question, not a profit one: that job is making {r2.profit}.",
+  disclosure:'<details class="src"><summary>What TIME COST and SUBS &amp; EXP mean</summary><p><b>TIME COST</b> is the cost of the hours booked to the job, priced at each person\'s internal rate — not the rate the client is charged. <b>SUBS &amp; EXP</b> is short for sub-consultants and expenses: everything spent that is not somebody\'s hours, so sub-consultant invoices, travel, printing, equipment. Added together, those two are JTD COST.</p></details>',
+  src:["report"]},
+
+ {id:"real.find.loss", kind:"rowpick", rows:REALROWS, ids:[4],
+  q:"Same five jobs, real column order.<br><br><b>Now tap the one that is going to lose money.</b>",
+  why:"<b>{r4.name}.</b> Its fee is {r4.fee} and it now expects to cost {r4.eac}. The expected cost is above the fee, so JTD PROFIT is {r4.profit}.<br><br>Its WIP is {r4.wip}, almost nothing, which on a fast scan looks like the healthiest row on the page — a completely different problem from the one you just found, and neither shows in the other's column.",
+  disclosure:'<details class="src"><summary>What TIME COST and SUBS &amp; EXP mean</summary><p><b>TIME COST</b> is the cost of the hours booked to the job, priced at each person\'s internal rate — not the rate the client is charged. <b>SUBS &amp; EXP</b> is short for sub-consultants and expenses: everything spent that is not somebody\'s hours, so sub-consultant invoices, travel, printing, equipment. Added together, those two are JTD COST.</p></details>',
   src:["report"]},
 
  {id:"real.recompose", kind:"compute", state:R_CEDARWAY, field:"jtd", showall:true,
@@ -1334,17 +1464,25 @@ const SECTIONS=[
    No answer key is ever written down. Every asserted value is produced
    by derive() at render time, from the same state the board draws from.
    ═══════════════════════════════════════════════════════════════════ */
-/* v5.1-partial, and the label is deliberate. This build carries P0 (both
-   showstoppers, both guards proven by seeding the defect and watching the test
-   fail) and P1 (every accuracy finding, including the false claim that JTD COST
-   is absent from the real report — it is column 15). P2 through P7 are NOT in
-   it: the five parallel agents were stopped by a monthly API spend limit before
-   they wrote anything. Calling this "v5.1" would tell the next session the
-   remediation shipped complete. It did not. */
-const BUILD = "v5.1-partial · built 260803 2117 ET";
+/* v5.1-partial, and the label is deliberate.
+   IN: P0 (both showstoppers), P1 (every accuracy finding, including the false
+   claim that JTD COST is absent from the real report, when it is column 15),
+   P3 (the whole re-entry cluster), P7-3 and P7-5. Every one of those shipped
+   with a test that was proven by seeding the original defect and watching it
+   fail.
+   NOT IN: P2 measurement, P4 interaction and mobile, P5 content and curriculum,
+   P6 accessibility, P7-1/2/4/6.
+   Calling this "v5.1" would tell the next session the remediation shipped
+   complete. It did not. */
+const BUILD = "v5.1-partial · built 260803 2328 ET";
 
-/* One caption per level, on the map. Data, so adding a level does not mean
-   editing an if-chain that silently captions the new one as the old one. */
+/* One caption per level. NOT rendered on the map since P4-10 (260804): six of
+   its eight values were just the section name lowercased, printed a second
+   time directly above the button that already prints it, costing ~350px of
+   the map and pushing level 700 and the reset link below the fold. Kept as
+   data — not deleted — in case a future screen wants a genuinely distinct
+   per-level caption; the map itself now prefixes the section's own name with
+   its level number instead. */
 const LEVELCAP={
   0:"what you are actually looking at",
   100:"where each number comes from",
@@ -1407,6 +1545,7 @@ function priorAnswers(){
     return (raw && raw.st) || {};
   }catch(e){ return {}; }
 }
+const WARMED=[];          // the warm items actually installed this session
 function installWarmups(){
   const prior=priorAnswers();
   SECTIONS.forEach(sec=>{
@@ -1414,13 +1553,39 @@ function installWarmups(){
     if(!Array.isArray(pool) || !pool.length) return;
     const n=Math.min(sec.warmN||2, pool.length);
     const order=shuffleOrder(pool.length, sec.id+"|warm");
-    const solid=i=>{ const r=prior[pool[i].id]; return !!(r && r.a1===1); };
-    const ranked=order.filter(i=>!solid(i)).concat(order.filter(solid));
+
+    /* P3-2 · THREE TIERS, AND THE UNRESOLVED ONE GOES LAST.
+       v5.0 ranked on `r.a1===1` alone, so an item he got wrong once on day one
+       stayed in the priority bucket for the life of the save and was
+       GUARANTEED to open the level, for ever. The thing he is stuck on was the
+       thing the app put in front of him first, every single time. Retrieval
+       practice is preserved by keeping never-attempted items first; what
+       changes is that a standing failure stops being the door. */
+    const tier=i=>{
+      const r=prior[pool[i].id];
+      if(!r || (r.a===undefined && r.a1===undefined)) return 0;   // never attempted
+      if(r.a1===1 || r.a===1) return 1;                           // resolved at some point
+      return 2;                                                    // still unresolved: LAST
+    };
+    const ranked=order.slice().sort((x,y)=>tier(x)-tier(y));       // stable: shuffle survives within a tier
     const take=ranked.slice(0,n).sort((a,b)=>a-b);
     const chosen=take.map(i=>pool[i]);
     sec.pool=pool.filter((s,i)=>take.indexOf(i)<0);
     pool.forEach(s=>{ s.warm=true; });
-    sec.steps=chosen.concat(sec.steps);
+
+    /* P3-5 · ONE AT THE HEAD, THE REST INTERLEAVED.
+       Four levels opened with two scored questions and no teaching card, on a
+       job he had never seen. That is the entry tax on a level, paid before
+       anything has been explained. Halving it and putting the second item
+       mid-section improves the spacing at the same time. */
+    const head=chosen.slice(0,1), mid=chosen.slice(1);
+    const base=sec.steps.slice();
+    if(mid.length){
+      const at=Math.max(1, Math.floor(base.length/2));
+      base.splice.apply(base, [at,0].concat(mid));
+    }
+    sec.steps=head.concat(base);
+    chosen.forEach(s=>WARMED.push(s.id));
   });
 }
 installWarmups();
@@ -1516,7 +1681,7 @@ function expand(txt, step){
 /* ---------- progress. Keyed on stable string ids, never on position. ----------
    KEY and SAVEV are declared with the warm-up block above, because the warm-up
    picker has to read prior answers before this loader runs. */
-let ST={}, HW=0;   // HW is vestigial: nothing locks. Kept so older saves load.
+let ST={}, HW=0, PLACE=null;   // HW is vestigial: nothing locks. Kept so older saves load.
 (function load(){
   try{
     const raw=JSON.parse(localStorage.getItem(KEY)||"null");
@@ -1528,10 +1693,55 @@ let ST={}, HW=0;   // HW is vestigial: nothing locks. Kept so older saves load.
       const known=new Set(ALLSTEPS.map(s=>s.id));
       for(const k in raw.st) if(known.has(k)) ST[k]=raw.st[k];   // unknown ids dropped
       HW = Math.min(Math.max(0, raw.hw|0), SECTIONS.length-1);
+      if(raw.place && typeof raw.place.sec==="string") PLACE=raw.place;
     }
   }catch(e){}
 })();
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify({v:SAVEV, st:ST, hw:HW})); }catch(e){} }
+/* P3-4 · A WARM-UP ITEM MUST BE ABLE TO COME BACK.
+   firstUnfinished() skips anything already answered correctly, so each pool
+   item yielded at most ONE spaced retrieval in its entire life and then went
+   quiet for ever, which is the opposite of what a warm-up is for. Clearing `v`
+   and `a` on the items installed this session lets them re-fire. `a1` is NEVER
+   cleared: first-attempt correctness is written once and is the only honest
+   record in the file. */
+(function refireWarmups(){
+  WARMED.forEach(id=>{
+    const r=ST[id]; if(!r) return;
+    const keep={};
+    if(r.a1!==undefined) keep.a1=r.a1;
+    ST[id]=keep;
+  });
+})();
+
+/* P3-3 · WHERE HE WAS. Section id and step id, never indices: the warm-up
+   installer splices a different number of items in front of a section between
+   sessions, so an index means a different step tomorrow. NOT A CLOCK. This
+   stores two strings naming a place. It records nothing about time and the app
+   still cannot tell how long he was away. */
+function markPlace(){
+  try{ PLACE={sec:SECTIONS[SEC].id, step:(cur()||{}).id||null}; }catch(e){ return; }
+  save();
+}
+function save(){
+  try{
+    /* P4-15 · THE V4 SAVE-KEY TRAP.
+       Money_Puzzles_v4_260803.html sits in the same folder, uses this SAME
+       localStorage key ("mp_v4"), and carries SAVEV=4. ITS loader rejects any
+       payload whose v is higher than its own SAVEV, so opening that stale file
+       (a stale home-screen icon, a stale published copy) after this one leaves
+       its ST empty — and the very next time IT calls save(), it overwrites
+       this key with {v:4, st:{}}, silently wiping every answer he has given.
+       The same trap runs in reverse if a future build ever gets here first.
+       Read what is actually on disk before writing over it: never overwrite a
+       payload whose version is already ahead of this build's. (Money_Puzzles_
+       v4_260803.html's own save() carries the mirror-image guard, so opening
+       IT after this one cannot wipe THIS build's save either — see that file,
+       same line number pattern.) */
+    const existing=JSON.parse(localStorage.getItem(KEY)||"null");
+    if(existing && typeof existing.v==="number" && existing.v>SAVEV) return;
+    localStorage.setItem(KEY, JSON.stringify({v:SAVEV, st:ST, hw:HW, place:PLACE}));
+  }catch(e){}
+}
 function rec(id, patch){ ST[id]=Object.assign({}, ST[id], patch); save(); }
 
 const isScored = st => st.kind==="choice" || st.kind==="select"
@@ -1592,6 +1802,14 @@ function firstUnfinished(i){
   if(isScored(st) && r && r.a===0){
     for(let j=found-1;j>=0;j--)
       if(steps[j].kind==="concept" || steps[j].kind==="worked") return j;
+    /* P3-1 · THE GUARD COULD NOT FIRE WHERE IT MATTERED MOST.
+       The walk-back above is `for(j=found-1;j>=0;j--)`. The warm-up installer
+       splices items to index 0 and index 1, where that loop body either never
+       executes or finds only the other warm-up, so on ALL EIGHT warm-up
+       positions the guard was inoperative and the app re-opened on exactly the
+       failed question it exists to avoid. With no teaching card behind it,
+       land on the section's own first step instead of on the failure. */
+    for(let j=0;j<steps.length;j++) if(!steps[j].warm) return j;
   }
   return found;
 }
@@ -1704,10 +1922,15 @@ function drawRows(step, opt){
 
 /* ---------- mode chrome ----------
    On a select or rowpick step the board stops being a readout and becomes the
-   answer control. That was previously discoverable only by tapping it. */
+   answer control. That was previously discoverable only by tapping it.
+   P4-6 · #modechrome never carried class="mode", so the .mode CSS rule (its
+   background, padding, flex layout, and the .mode .clr sizing) matched
+   nothing at all — the strip rendered with no chrome. Setting the class here
+   is what makes every P4-6/P4-7 fix to .mode/.clr actually take effect. */
 function setMode(step, resultText){
   const el=$("modechrome"); if(!el) return;
   if(!step){ el.style.display="none"; el.innerHTML=""; return; }
+  el.className="mode";
   el.style.display="";
   if(resultText!==undefined){ el.innerHTML='<span>'+resultText+'</span>'; return; }
   const rows = step.kind==="rowpick";
@@ -1715,6 +1938,16 @@ function setMode(step, resultText){
                  : document.querySelectorAll("#board .cell.chosen").length;
   el.innerHTML='<span>'+(rows?"Tap the rows":"Tap the fields")+' · '+n+' selected</span>'
     + (n ? '<button class="clr" type="button" onclick="clearPicks()">Clear</button>' : '');
+}
+/* P4-6 · "Result · you chose N of M" reads as a score printed directly under
+   a red NOT QUITE band, when M is the total field count and N conflates
+   right and wrong picks into one number. A breakdown of what was actually
+   chosen, right, and missed does not read as a percentage. */
+function resultText(picked, want){
+  const right=picked.filter(id=>want.indexOf(id)>=0).length;
+  const missed=want.filter(id=>picked.indexOf(id)<0).length;
+  return "you chose "+picked.length+" &middot; "+right+" "+(right===1?"was":"were")
+    +" right &middot; you missed "+missed;
 }
 function clearPicks(){
   document.querySelectorAll("#board tbody tr.pick").forEach(tr=>{
@@ -1762,6 +1995,11 @@ function wireCells(tappable, bare){
 
 function setCell(id, from, to, opt){
   opt=opt||{};
+  /* P4-3 · the animation-delay (default 0, set by revealBoard's staged loop
+     below) drives ONLY the fade-in of the flash pulse, the chip and the "was"
+     line. v.textContent and the aria-label are set immediately, on the same
+     tick as every other cell, regardless of this delay. */
+  const dly=(opt.delay||0)+"ms";
   const el=$("cell-"+id); if(!el) return;
   const c=CMAP[id], a=derive(from), b=derive(to);
   const d=b[id]-a[id], moved=Math.abs(d)>0.005;
@@ -1772,25 +2010,28 @@ function setCell(id, from, to, opt){
     + (moved ? ", was "+fmtVal(c,a[id]) : ""));
   el.classList.remove("up","down","still","flash");
   void el.offsetWidth;
+  el.style.animationDelay=dly;
   if(opt.direction!==false){
     el.classList.add(moved ? (d>0?"up":"down") : "still", "flash");
     if(!el.querySelector(".chip"))
       el.insertAdjacentHTML("beforeend", moved
-        ? '<span class="chip '+(d>0?"up":"down")+'" aria-hidden="true">'+(d>0?"▲":"▼")+'</span>'
-        : '<span class="chip still" aria-hidden="true">'+(opt.stillLabel||"NO CHANGE")+'</span>');
+        ? '<span class="chip '+(d>0?"up":"down")+'" aria-hidden="true" style="animation-delay:'+dly+'">'+(d>0?"▲":"▼")+'</span>'
+        : '<span class="chip still" aria-hidden="true" style="animation-delay:'+dly+'">'+(opt.stillLabel||"NO CHANGE")+'</span>');
     if(moved && !el.querySelector(".was"))
-      el.insertAdjacentHTML("beforeend", '<span class="was" aria-hidden="true">was '+fmtVal(c,a[id])+'</span>');
+      el.insertAdjacentHTML("beforeend", '<span class="was" aria-hidden="true" style="animation-delay:'+dly+'">was '+fmtVal(c,a[id])+'</span>');
   } else {
     el.classList.add("flash");
   }
 }
-function badge(id, kind, text){
+function badge(id, kind, text, delay){
   const el=$("cell-"+id); if(!el || el.querySelector(".badge")) return;
-  /* a judgement badge and a direction chip overlap by about a third of a cell
-     on a phone. At the moment of judgement the badge is the information; hue
-     and the "was" line still carry the direction. */
-  const chip=el.querySelector(".chip"); if(chip) chip.remove();
-  el.insertAdjacentHTML("beforeend", '<span class="badge '+kind+'" aria-hidden="true">'+text+'</span>');
+  /* P4-2 · the badge now sits on the bottom edge (CSS), diagonally opposite
+     the chip on the top edge, so it no longer has to delete the chip to avoid
+     colliding with it. On a correctly-chosen cell that moved, all three
+     channels — colour, direction chip, judgement badge — now survive together.
+     P4-3 · staged in board order, same mechanism as setCell(). */
+  const dly=(delay||0)+"ms";
+  el.insertAdjacentHTML("beforeend", '<span class="badge '+kind+'" aria-hidden="true" style="animation-delay:'+dly+'">'+text+'</span>');
   const hit=el.querySelector(".cellhit");
   if(hit) hit.setAttribute("aria-label",(hit.getAttribute("aria-label")||"")+". "
     + text.replace(/[^A-Za-z ]/g,"").trim().toLowerCase());
@@ -1799,6 +2040,14 @@ function badge(id, kind, text){
 /* ---------- definition dialog ---------- */
 const defOpen = () => $("defWrap").style.display==="flex";
 function showDef(id, trigger){
+  /* P4-12 · on a non-bare compute step, tapping the board while the numeric
+     input was focused (the on-screen keyboard open) used to open this dialog
+     anyway — $("defClose").focus() below steals focus straight off the input
+     and dismisses the keyboard mid-entry. Suppressing here, in the one place
+     every trigger path (cellq click, cellhit click, long-press, contextmenu)
+     already funnels through, covers all of them with one guard. */
+  const ae=document.activeElement;
+  if(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA")) return;
   const c=CMAP[id]; if(!c||!c.def) return;
   suppressUntil=Date.now()+400; lastTrigger=trigger||null;
   $("defBody").innerHTML=c.def;
@@ -1860,6 +2109,15 @@ function render(){
      the next screen. It only became reachable once a level of pure teaching
      cards existed to navigate into. */
   clearTimeout(lpTimer);
+  /* P4-6 · render() has several early returns below (concept, worked, the
+     reviewStep() hand-off, rowpick, select) and setMode() was only ever
+     called from inside specific branches, never unconditionally. Landing on
+     a step whose branch never touches it left a PREVIOUS step's mode strip
+     on screen — stale "N selected" text and a Clear button wired to a board
+     that no longer matches it. Reset it here, before any branch runs, so
+     every step starts from the same clean state and only re-shows it if its
+     own kind actually calls setMode() again. */
+  setMode(null);
   answered=false; tries=0; warned=false; wIdx=0;
   $("map").style.display="none";
   $("right").style.display="";
@@ -1897,7 +2155,8 @@ function render(){
   /* A question already answered correctly re-opens as a REVIEW, not a re-test.
      One stray tap while re-reading used to overwrite a correct answer. A tool
      built to be consulted cannot only be taken. */
-  if(isScored(step) && ST[step.id] && ST[step.id].a===1) return reviewStep(step);
+  const forcedRetry=RETRYING; RETRYING=false;
+  if(isScored(step) && ST[step.id] && ST[step.id].a===1 && !forcedRetry) return reviewStep(step);
 
   if(step.kind==="rowpick"){
     drawRows(step,{tappable:true});
@@ -1905,6 +2164,10 @@ function render(){
       +'<div class="body">'+expand(step.q,step)+'</div>'
       +'<div class="hint">Tap rows in the table above. Tap again to unselect. '
       +'It scrolls sideways, exactly as the real one does.</div>'
+      /* P4-8 · a closed-by-default panel-level disclosure — NOT a restored
+         "?" on the board, which would leak bare mode back onto the one level
+         built to withhold it. */
+      +(step.disclosure||"")
       +'<div id="msg" role="status"></div>'
       +'<button class="btn" type="button" onclick="submitRows()">Submit</button>';
     foot(backBtn()+'<span class="spacer"></span>'+primary("Submit","submitRows()"));
@@ -1974,24 +2237,30 @@ function render(){
 
 function reviewStep(step){
   answered=true;
-  if(step.kind==="rowpick"){ drawRows(step,{}); setMode(null); }
-  else revealBoard(step, []);
+  /* P4-4 · replay what he actually picked, stored at grading time in
+     ST[step.id].pk. Before this, revealBoard/drawRows were called with an
+     empty selection here, so the one screen built to be consulted was the
+     one that had already lost the evidence. */
+  const picked=(ST[step.id]&&ST[step.id].pk)||[];
+  if(step.kind==="rowpick"){ drawRows(step,{}); setMode(null); markRows(step, picked); }
+  else { revealBoard(step, picked); if(step.kind==="select") markBadges(step, picked, false); }
   $("panel").innerHTML='<div class="verdict s" role="status">Answered</div>'
     +'<div class="body">'+expand(step.q,step)+'</div>'
-    +'<div class="body">'+expand(step.why,step)+'</div>'+srcHTML(step);
-  foot(backBtn()+'<span class="spacer"></span>'+ghost("Try it again","retry()")
+    +'<div class="body">'+expand(step.why,step)+'</div>'+srcHTML(step)+retryLink();
+  foot(backBtn()+'<span class="spacer"></span>'
     +primary(lastStep()?"Finish section":"Continue","nextStep()"));
   window.scrollTo(0,0);
 }
-/* Retry clears the answer but NEVER a1. First-attempt correctness is written
-   once and is the only honest record in the file; wiping it on retry would
-   have made it a record of persistence instead. Nothing depends on it — the
-   gate is gone — so it is purely a read for him. */
-function retry(){
-  const step=cur(), prev=ST[step.id]||{};
-  ST[step.id]= (prev.a1===undefined) ? {v:1} : {v:1, a1:prev.a1};
-  save(); render();
-}
+/* P3-6 · RETRY MUST NOT DECREMENT THE SCORE.
+   It used to drop `.a` the moment it was tapped, and it sat ten pixels from
+   Continue on every review screen, which is the screen he opens when he is
+   using this as a resource rather than taking it. One mis-tap silently lowered
+   the headline count on the map, for a question he had already got right.
+   Now it only re-opens the question. The score changes when, and only when, a
+   new answer is graded, which is what grade() is for. `a1` is untouched here
+   as it always was: first-attempt correctness is written once. */
+let RETRYING=false;
+function retry(){ RETRYING=true; render(); }
 
 /* ---------- worked examples: one stage per tap, text replaced ---------- */
 function showStage(i){
@@ -2063,8 +2332,9 @@ function revealBoard(step, keepChosen){
      carrying no mark at all — the one the sentence was about. */
   const movementItem = !!step.after || step.kind==="select";
   if(step.mode!=="identify" && movementItem){
-    visibleIds(sec.layout).forEach(id=>setCell(id, step.state, step.after||step.state,
-      {stillLabel:step.stillLabel||"NO CHANGE"}));
+    /* P4-3 · the ~120ms-per-cell stagger, in board order. See setCell(). */
+    visibleIds(sec.layout).forEach((id,k)=>setCell(id, step.state, step.after||step.state,
+      {stillLabel:step.stillLabel||"NO CHANGE", delay:k*120}));
   }
   (keepChosen||[]).forEach(id=>{
     const el=$("cell-"+id); if(!el) return;
@@ -2073,13 +2343,27 @@ function revealBoard(step, keepChosen){
     if(hit) hit.setAttribute("aria-pressed","true");
   });
 }
+/* P3-7 · the tally is restated directly under the red band, where it has not
+   changed and adds nothing except a low number under the word NOT QUITE. It
+   renders on correct answers and at section end only. THE BAND ITSELF DOES NOT
+   MOVE: same 20px, same weight, same full bleed, both directions. Softening
+   the red one is the obvious future "kindness" edit and it would make the
+   green one read as flattery. */
+const retryLink = () =>
+  '<button class="btn ghost retryb" type="button" onclick="retry()">Try it again</button>';
+
 function reveal(ok, step, keepChosen){
   revealBoard(step, keepChosen);
+  /* P4-9 · after window.scrollTo(0,0) below, he lands back at the top of the
+     screen reading an answer to a question that has scrolled out of view.
+     reviewStep() already restates the question, dimmed, above its why —
+     reveal() must match it so the SAME screen he reads immediately after
+     submitting isn't the one place in the app that discards its own question. */
   $("panel").innerHTML = verdictHTML(ok)
+    + '<div class="body">'+expand(step.q,step)+'</div>'
     + '<div class="body">'+expand(step.why,step)+'</div>'
-    + srcHTML(step) + tallyHTML();
+    + srcHTML(step) + (ok ? tallyHTML() : retryLink());
   foot(backBtn()+'<span class="spacer"></span>'
-    + (ok ? "" : ghost("Try it again","retry()"))
     + primary(lastStep()?"Finish section":"Continue","nextStep()"));
   window.scrollTo(0,0);
 }
@@ -2109,10 +2393,40 @@ function pick(disp){
   grade(false); reveal(false, step);
 }
 
+/* P4-4 · ST[id] never stored WHICH cells or rows he picked, only whether he
+   got it right — so a re-opened question (the review path, which is exactly
+   the path he uses to consult this as a resource) showed an unmarked board,
+   and on real.find.wip/real.find.loss a completely unmarked five-row table.
+   markBadges/markRows are the same marking logic submitSel/submitRows always
+   ran at grading time, now factored out so reviewStep() can replay them
+   against the STORED picks instead of losing the evidence. */
+function markBadges(step, picked, stagger){
+  const vis=visibleIds(SECTIONS[SEC].layout), want=answerIds(step);
+  vis.forEach((id,k)=>{
+    const p=picked.includes(id), w=want.includes(id), dly=stagger?k*120:0;
+    if(p&&w) badge(id,"right","✓ RIGHT",dly);
+    else if(p&&!w) badge(id,"wrong","✗ WRONG",dly);
+    else if(!p&&w) badge(id,"missed","○ MISSED",dly);
+  });
+}
+function markRows(step, picked){
+  const want=(step.ids||[]).slice();
+  document.querySelectorAll("#board tbody tr").forEach(tr=>{
+    const n=parseInt(tr.dataset.row,10)+1;
+    const p=picked.indexOf(n)>=0, w=want.indexOf(n)>=0, jn=tr.querySelector(".jn");
+    if(p&&w){ tr.classList.add("rr"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark">&#10003; RIGHT</span>'); }
+    else if(p&&!w){ tr.classList.add("rw"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark wrong">&#10007; WRONG</span>'); }
+    else if(!p&&w){ tr.classList.add("rm"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark missed">&#9675; MISSED</span>'); }
+  });
+}
+
 function submitSel(){
   if(answered) return;
   const step=cur();
   const picked=[...document.querySelectorAll("#board .cell.chosen")].map(e=>e.dataset.id);
+  /* P4-11 · this tap is the CONFIRMED empty submission he was told about:
+     "tap Submit again and that is the answer you will give." */
+  const confirmedEmpty = !picked.length && warned;
   if(!picked.length && !warned){
     warned=true;
     msg("Nothing is selected. If you mean <b>none of them move</b>, tap Submit again and that is the answer you will give.");
@@ -2121,21 +2435,20 @@ function submitSel(){
   const want=answerIds(step);
   const ok = picked.length===want.length && picked.slice().sort().join()===want.slice().sort().join();
   noteFirst(step, ok);
-  if(!ok && tries===0){
+  /* `tries` is still 0 here even on this second tap — the first empty
+     submission only set `warned`, not `tries` — so without excluding
+     confirmedEmpty, the promised FINAL answer silently fell into the generic
+     "Not quite, one more try" branch instead of being graded as promised. */
+  if(!ok && tries===0 && !confirmedEmpty){
     tries=1; warned=true;
     msg("Not quite. <b>One more try</b> — change your selection and submit again.");
     return;
   }
   grade(ok);
+  rec(step.id, {pk:picked});   // P4-4 · so the review path can restore what he tapped
   reveal(ok, step, picked);
-  const vis=visibleIds(SECTIONS[SEC].layout);
-  vis.forEach(id=>{
-    const p=picked.includes(id), w=want.includes(id);
-    if(p&&w) badge(id,"right","✓ RIGHT");
-    else if(p&&!w) badge(id,"wrong","✗ WRONG");
-    else if(!p&&w) badge(id,"missed","○ MISSED");
-  });
-  setMode(step, "Result · you chose "+picked.length+" of "+vis.length);
+  markBadges(step, picked, true);
+  setMode(step, resultText(picked, want));
 }
 
 /* ---------- the real report: grading a row selection ---------- */
@@ -2144,6 +2457,9 @@ function submitRows(){
   const step=cur();
   const picked=[...document.querySelectorAll("#board tbody tr.pick")]
     .map(tr=>parseInt(tr.dataset.row,10)+1);
+  /* P4-11 · same fix as submitSel(): this tap is the CONFIRMED empty
+     submission ("tap Submit again and that is the answer you will give"). */
+  const confirmedEmpty = !picked.length && warned;
   if(!picked.length && !warned){
     warned=true;
     msg("Nothing is selected. If you mean <b>none of these rows</b>, tap Submit again and that is the answer you will give.");
@@ -2153,26 +2469,24 @@ function submitRows(){
   const ok = picked.length===want.length
     && picked.slice().sort().join()===want.slice().sort().join();
   noteFirst(step, ok);
-  if(!ok && tries===0){
+  if(!ok && tries===0 && !confirmedEmpty){
     tries=1; warned=true;
     msg("Not quite. <b>One more try</b> — change your selection and submit again.");
     return;
   }
   grade(ok);
+  rec(step.id, {pk:picked});   // P4-4 · so the review path can restore which rows he tapped
   drawRows(step,{});
-  document.querySelectorAll("#board tbody tr").forEach(tr=>{
-    const n=parseInt(tr.dataset.row,10)+1;
-    const p=picked.indexOf(n)>=0, w=want.indexOf(n)>=0, jn=tr.querySelector(".jn");
-    if(p&&w){ tr.classList.add("rr"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark">&#10003; RIGHT</span>'); }
-    else if(p&&!w){ tr.classList.add("rw"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark wrong">&#10007; WRONG</span>'); }
-    else if(!p&&w){ tr.classList.add("rm"); jn.insertAdjacentHTML("beforeend",'<span class="rpmark missed">&#9675; MISSED</span>'); }
-  });
-  setMode(step, "Result &middot; you chose "+picked.length+" of "+step.rows.length+" rows");
+  markRows(step, picked);
+  setMode(step, resultText(picked, want));
+  /* P4-9 · same fix as reveal(): restate the question above the why, so the
+     screen he lands on after scrollTo(0,0) is not answering a question that
+     has scrolled off screen. */
   $("panel").innerHTML = verdictHTML(ok)
+    + '<div class="body">'+expand(step.q,step)+'</div>'
     + '<div class="body">'+expand(step.why,step)+'</div>'
-    + srcHTML(step) + tallyHTML();
+    + srcHTML(step) + (ok ? tallyHTML() : retryLink());
   foot(backBtn()+'<span class="spacer"></span>'
-    + (ok ? "" : ghost("Try it again","retry()"))
     + primary(lastStep()?"Finish section":"Continue","nextStep()"));
   window.scrollTo(0,0);
 }
@@ -2298,6 +2612,11 @@ function scoreChk(){
     line += " You said not yet, and you covered all of them.";
   else if(r.pre===1 && hit===boxes.length)
     line += " That matches what you said before you looked.";
+  else if(r.pre===0)
+    /* P3-8 · every other path got a sentence and this one got a bare count.
+       Flat, factual, no encouragement: state what is there. */
+    line += " You said not yet, and "+hit+" of the "+boxes.length
+         +" are already in what you wrote.";
   msg(line+" Nothing here is scored and nothing depends on it.","hint");
 }
 
@@ -2307,13 +2626,31 @@ function openSection(i){
   if(i<0 || i>=SECTIONS.length) return;
   SEC=i; S=firstUnfinished(i); view="sec"; render();
 }
+/* P3-3 · THE APP HAD NO MEMORY OF PLACE.
+   SEC and S reset to 0 on every load, and "Continue" meant "the first section
+   that is not complete", which is his earliest unresolved failure, for ever.
+   Days later, the app's opening move was to hand him the oldest thing he got
+   wrong. This is the single change most likely to make him open it twice. */
+function placeIndex(){
+  if(!PLACE) return null;
+  const si=SECTIONS.findIndex(x=>x.id===PLACE.sec);
+  if(si<0) return null;
+  const k=SECTIONS[si].steps.findIndex(x=>x.id===PLACE.step);
+  /* the remembered step may be a warm-up that is not installed this session,
+     or a step a later build removed. Fall back inside the same section. */
+  return {sec:si, step: k>=0 ? k : firstUnfinished(si)};
+}
 function resume(){
+  const p=placeIndex();
+  if(p){ SEC=p.sec; S=p.step; view="sec"; render(); return; }
   for(let i=0;i<SECTIONS.length;i++) if(!secStat(i).complete) return openSection(i);
   openSection(SECTIONS.length-1);
 }
 function resetAll(){
   if(!confirm("Clear all progress, including anything you have typed, and start again from the beginning?")) return;
-  ST={}; HW=0; save(); goMap();
+  /* "Start over from the beginning" must also forget WHERE he was, or the
+     app reopens on a step from a run he has just erased. */
+  ST={}; HW=0; PLACE=null; save(); goMap();
 }
 function renderMap(){
   view="map";
@@ -2324,19 +2661,23 @@ function renderMap(){
   const totalSc=SECTIONS.reduce((n,s)=>n+s.steps.filter(x=>isScored(x)&&!x.warm).length,0);
   const rightSc=SECTIONS.reduce((n,s,i)=>n+secStat(i).right,0);
   const touched=Object.keys(ST).length>0;
+  /* P4-10 · "stop anywhere and lose nothing" moved ABOVE the score, per spec —
+     it is the sentence that makes the score read as a record rather than a
+     requirement. "Saved in this browser, on this device" (P4-15) stays
+     attached to it, same unit. */
   let html='<h1 class="maphead">How the firm counts money</h1>'
     +'<div class="mapsub">Every figure in here is invented and no real Buro Happold project appears.'
-    +'<br><b>'+rightSc+' of '+totalSc+' questions answered correctly.</b> '
-    +'Start anywhere, in any order, and retry anything as often as you like. '
-    +'It saves after every answer, so you can stop mid-section and lose nothing.</div>';
-  let lvl=null;
+    +' Start anywhere, in any order, and retry anything as often as you like. '
+    +'It saves after every answer, so you can stop mid-section and lose nothing. '
+    +'Saved in this browser, on this device.'
+    +'<br><br><b>'+rightSc+' of '+totalSc+' questions answered correctly.</b></div>';
+  /* P4-10 · .lvlhead deleted. Six of eight level captions were just the
+     section name lowercased, printed a second time above the very button
+     that already prints it — about 350px of a ~1,090px map, and enough to
+     push level 700 and the reset link below the fold. The level number now
+     prefixes the section's own name instead of getting its own heading. */
   const nextUp=SECTIONS.findIndex((x,k)=>!secStat(k).complete);
   SECTIONS.forEach((s,i)=>{
-    if(s.level!==lvl){
-      lvl=s.level;
-      html+='<h2 class="lvlhead">'+String(s.level).padStart(3,"0")
-        +' level <span>· '+(LEVELCAP[s.level]||"")+'</span></h2>';
-    }
     /* every row is open. The progress column is a record of what he has done,
        never a barrier and never a reason he cannot go somewhere. */
     const st=secStat(i);
@@ -2344,11 +2685,13 @@ function renderMap(){
     const prog = st.complete ? "All "+st.n+" correct"
       : started ? st.right+" of "+st.n+" correct"
       : "Not started";
+    const pct = st.n ? Math.round(100*st.right/st.n) : 0;
     html+='<button class="sec '+(st.complete?"done":"")+' '+(nextUp===i?"now":"")
       +'" type="button" onclick="openSection('+i+')">'
       +'<span class="secnum">'+(st.complete?"✓":i+1)+'</span>'
-      +'<span class="secbody"><span class="secname">'+s.name+'</span>'
-      +'<span class="secline">'+s.line+' · '+s.steps.length+' steps</span></span>'
+      +'<span class="secbody"><span class="secname">'+String(s.level).padStart(3,"0")+' · '+s.name+'</span>'
+      +'<span class="secline">'+s.line+' · '+s.steps.length+' steps</span>'
+      +'<span class="secbar" aria-hidden="true"><span style="width:'+pct+'%"></span></span></span>'
       +'<span class="secprog">'+prog+'</span></button>';
   });
   /* Reset used to sit in the footer slot that says "Back" on every other
@@ -2357,7 +2700,14 @@ function renderMap(){
     +'<div class="mapfoot"><span id="ver">'+BUILD+'</span></div>';
   $("map").innerHTML=html;
   $("where").textContent="Money Puzzles";
-  foot('<span class="spacer"></span>'+primary(touched?"Continue":"Start","resume()"));
+  const p=placeIndex();
+  /* P4-10 · the primary button now names WHERE it is taking him, not just
+     that it will take him somewhere. */
+  const destIdx = p ? p.sec : (nextUp>=0 ? nextUp : SECTIONS.length-1);
+  const destName = SECTIONS[destIdx] ? SECTIONS[destIdx].name : "";
+  const label = (p ? "Continue where you were" : (touched?"Continue":"Start"))
+    + (destName ? " · "+destName : "");
+  foot('<span class="spacer"></span>' + primary(label, "resume()"));
   window.scrollTo(0,0);
 }
 
@@ -2390,10 +2740,17 @@ function renderEnd(){
     +'<div class="body">'+line
     +'<br><br>Nothing is locked and nothing expires. Any step in here re-opens as a reminder rather than a test, and you can come back to any of it in any order.'
     +last+'</div>';
-  foot(ghost("Back into the section","reopenSection()")
+  /* P4-5 · this bar used to read [Back into the section][Next: <full section
+     name>] — up to ~520px in a 390px bar. A section name can run to 29
+     characters, and "Next: " on top of it broke the rule that a phone's
+     primary button never carries a 28-character noun phrase: the label
+     wrapped onto a second line and pushed #foot past its reserved --footh,
+     covering the bottom of the panel. Both labels are now short and of FIXED
+     length regardless of the section's name. */
+  foot(ghost("Back","reopenSection()")
     +'<span class="spacer"></span>'
     +(nextI<0 ? primary("All sections","goMap()")
-              : primary("Next: "+SECTIONS[nextI].name,"openSection("+nextI+")")));
+              : primary("Next section","openSection("+nextI+")")));
   window.scrollTo(0,0);
 }
 function reopenSection(){ view="sec"; S=SECTIONS[SEC].steps.length-1; render(); }
@@ -2406,7 +2763,8 @@ function nextStep(){
   rec(cur().id,{v:1});
   bumpHW();
   S++;
-  if(S>=SECTIONS[SEC].steps.length){ view="end"; render(); return; }
+  if(S>=SECTIONS[SEC].steps.length){ markPlace(); view="end"; render(); return; }
+  markPlace();
   render();
 }
 
@@ -2606,6 +2964,14 @@ function boot(){
   const errs=selfTest();
   if(errs.length){ fail("This build did not pass its own check, so it has not started. "+errs.length+" problem(s):", errs); return; }
   render();
+}
+/* P4-14 · registers the cache-first worker so a home-screen launch opens
+   even with no signal. Guarded three ways: feature-checked (no-ops in the
+   Node/jsdom test harness, which carries no serviceWorker API), wrapped in
+   try/catch, and .catch()'d on the promise itself — sw.js does not exist
+   under file://, and that must never surface as a broken app. */
+if(typeof navigator!=="undefined" && "serviceWorker" in navigator){
+  try{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }catch(e){}
 }
 if(typeof window!=="undefined" && typeof document!=="undefined" && document.getElementById) boot();
 else if(typeof globalThis!=="undefined") globalThis.__MP={SECTIONS,CELLS,CMAP,LAYOUTS,SRC,derive,money,pctS,
