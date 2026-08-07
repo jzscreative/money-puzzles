@@ -328,6 +328,14 @@ details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
 .btn.ghost{background:transparent;color:var(--dim);border:1.5px solid var(--rule);font-weight:600;
   padding:13px 16px}
 .btn.dark{background:var(--judge)}
+/* P6-1 · the global :focus-visible outline uses var(--acc), which measures only
+   2.74:1 against .btn.dark's var(--judge) background — a confirmed WCAG 1.4.11
+   non-text-contrast failure on a reachable, keyboard-focusable control (the
+   "Show the model answer" button on every explain step). var(--darkink) against
+   the same background measures 18.36:1. Scoped to .btn.dark only — every other
+   button keeps the standard var(--acc) outline, which already clears 3:1 against
+   the light-panel backgrounds those buttons sit on. */
+.btn.dark:focus-visible{outline-color:var(--darkink)}
 /* "Try it again" lives in the panel now, not in the fixed action bar ten pixels
    from Continue. Full width and its own row, so a thumb aiming at Continue
    cannot land on it. */
@@ -370,8 +378,15 @@ details.src p{margin-top:6px;line-height:1.55;color:var(--body)}
 
 <div id="foot" role="navigation" aria-label="Step controls"></div>
 
-<div id="defWrap" role="dialog" aria-modal="true" aria-labelledby="defBody">
+<!-- P6-3 · the dialog used to be labelled BY its own body (aria-labelledby="defBody"),
+     so most screen readers announced the whole definition once as the dialog's
+     accessible NAME and then again as its content — the entire definition, twice,
+     before he had heard a single new word. defTitle is a short, visually hidden
+     heading ("FEE, definition" etc., filled in by showDef()) that becomes the name;
+     defBody moves to aria-describedby, which is read once, as content, the normal way. -->
+<div id="defWrap" role="dialog" aria-modal="true" aria-labelledby="defTitle" aria-describedby="defBody">
   <div id="defBox">
+    <h2 id="defTitle" style="position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0"></h2>
     <div id="defBody"></div>
     <button class="btn" id="defClose" type="button" style="margin-top:14px">Got it</button>
   </div>
@@ -534,6 +549,24 @@ const KES_REWORK = {...KESTREL, jtd:66000};
 const KES_PLAN   = {...KESTREL, jtd:72000, etc:108000};
 const KES_INV    = {...KESTREL, inv:65000};
 const KES_ETCDOWN= {...KESTREL, etc:96000};
+/* P5-7 · a second, independent over-budget job. mixed.f used to share
+   MARLOW -> MAR_PLAN with spend.losing, and its stem said "same shape as two
+   screens ago", which handed over the identification (the level's whole
+   point) instead of making it re-derive from EAC COST against FEE. KES_OVER
+   raises Kestrel's own forecast until expected cost passes its fee — a
+   different job, different fee, different numbers throughout — then
+   KES_OVER_PLAN books planned time on it the same way KES_PLAN does on the
+   healthy Kestrel, so the two are a genuine minimal pair on the SAME job:
+   identical mechanism, opposite margin, distinct figures from Marlow's. */
+const KES_OVER     = {...KESTREL, etc:200000};                    // eac 254000, above the 240000 fee
+const KES_OVER_PLAN= {...KES_OVER, jtd:74000, etc:180000};        // planned booking: eac unchanged at 254000
+/* P5-7 · a COMPOUND month: unplanned cost lands (jtd up, etc unchanged, so
+   EAC rises) AND an invoice goes out (inv up), in the same month. Level 600
+   had no item where two of its four events happen at once, and WIP moving
+   under two simultaneous causes is exactly where "WIP on its own never tells
+   you what happened" (taught at level 500) gets genuinely hard to hold onto.
+   Profit falls (real money landed, unplanned) and both JTD COST and INV move. */
+const MAR_COMPOUND = {...MARLOW, jtd:79800, inv:65000};
 
 const FOX_PLAN6    = {...FOXGLOVE, jtd:36000, etc:44000};
 const FOX_PLAN10   = {...FOXGLOVE, jtd:40000, etc:40000};
@@ -614,31 +647,34 @@ const SECTIONS=[
  line:"The real report, its real name, and who acts on it",
  steps:[
 
+ /* P5-1 · LEVEL 000 CUT FROM FOUR READING CARDS TO TWO. It used to run
+    model.what → model.who → model.board → model.names, unbroken, before
+    model.check asked a single question. model.who listed all five checks
+    on the firm's Project Director Checklist when this app teaches exactly
+    one of them (JTD/EAC profit against target — the rest never resurface).
+    model.names translated six column headings he had not even met yet into
+    a SECOND vocabulary he will never be tested on. Both are real and both
+    are moved, verbatim, to the end of level 700 (see below), where four of
+    their five terms will actually mean something by then. What is left at
+    000 is model.what (kept exactly as written — it is the one card that
+    earns its place) and model.board, which now also carries the one
+    sentence 000 still owes him about the second sheet: that it exists, and
+    that this is not the lesson for it. */
  {id:"model.what", kind:"concept",
   title:"The report has a name.",
   body:"It is the <b>Traffic Light Report</b>, and it comes out of Vantagepoint, the system Buro Happold runs its projects in.<br><br>The pull is <b>scheduled daily</b>: dated copies land overnight, in the early hours. Not monthly, not on request.<br><br>There are two versions of it. The <b>Simple</b> one has sixteen columns. The one <b>in Billing Currency</b> has twenty-five, and it is the one carrying the cost breakdown this app is about.<br><br>Every column name you meet from here on is the real heading off that report. Not one of them has been softened into something friendlier.",
   src:["report"]},
 
- {id:"model.who", kind:"concept",
-  title:"Somebody is accountable for reading it. On your own projects that is you.",
-  body:"The <b>Project Director</b> works from this report.<br><br>Buro Happold's own guidance sets that inside a five-task monthly routine called the <b>Project Director Checklist</b>. Reviewing the Traffic Light Report is Task 3, and the five checks listed under it are: <b>EAC profit percentage, with contingency spent</b>, against the target profit percentage; <b>JTD profit percentage</b> against that same EAC profit percentage; unpaid invoices; cash lock-up against maximum cash lock-up; and WIP.<br><br>They are percentages, not amounts, and the “with contingency spent” qualifier on the first one is the firm's wording, not a detail.<br><br>Note the two different clocks. <b>The report lands daily. The decision it feeds is monthly.</b> The firm's wording is that completing the checklist by the 25th of each month “remains recommended best practice”.",
-  src:["checklist"]},
-
  {id:"model.board", kind:"concept",
   title:"This app is one row of that report, opened out.",
-  body:"The real thing is a table. One row per job, many jobs down the page, columns running left to right off the edge of the screen.<br><br>Everything you are about to do takes <b>a single row</b> and lays it down the screen instead, and in a different order.<br><br>The report prints the <b>result first</b> and the evidence that produced it much further along. This app runs the other way round, in the order the numbers are actually worked out, because that is far easier to learn the first time.<br><br>That difference is real and it is not being hidden from you. The <b>700 level</b> puts you back in front of the page in its own order, with nothing annotated and no hints."},
-
- {id:"model.names", kind:"concept",
-  title:"There is a second sheet, and it uses different words for the same numbers.",
-  body:"The <b>monthly project accounts sheet</b> is a different document, and it does not share the Traffic Light Report's vocabulary.<br><br>What the Traffic Light Report calls <b>CLAIMED REVENUE</b>, that sheet calls <b>Revenue</b>. <b>TIME COST</b> becomes <b>Time Costs</b>. <b>ETC COST</b> becomes <b>ETC</b>. <b>SUBS &amp; EXP</b> becomes <b>Subs &amp; Exps</b>. <b>LIVE CALCULATED % COMP</b> becomes <b>% Comp</b>. And <b>EAC COST</b> is not printed on it at all.<br><br>Same numbers. Two vocabularies.<br><br>You are being told this now so it cannot ambush you later. This app teaches the Traffic Light Report names and only those, because that is the page a Project Director works from. Translating between the two sheets is its own lesson, and it is not this one.",
-  src:["names"]},
+  body:"The real thing is a table. One row per job, many jobs down the page, columns running left to right off the edge of the screen.<br><br>Everything you are about to do takes <b>a single row</b> and lays it down the screen instead, and in a different order.<br><br>The report prints the <b>result first</b> and the evidence that produced it much further along. This app runs the other way round, in the order the numbers are actually worked out, because that is far easier to learn the first time.<br><br>That difference is real and it is not being hidden from you. The <b>700 level</b> puts you back in front of the page in its own order, with nothing annotated and no hints.<br><br>One more thing before any of that: <b>another sheet uses different words for these same numbers. We will get to it.</b>"},
 
  {id:"model.check", kind:"choice", state:FOXGLOVE, showall:true, fixed:true,
   q:"Below is the board this app uses, filled in for an invented job.<br><br><b>What are you looking at?</b>",
   opts:["One row of the Traffic Light Report, opened out down the screen and put into the order the numbers are calculated",
-        "One row of the Traffic Light Report, in the order the report itself prints it",
-        "Several jobs on a project, added together into one summary",
-        "The monthly project accounts sheet, simplified"],
+        "One row of the Traffic Light Report, kept in the exact order the report itself already prints it, result first each time",
+        "Several jobs on a project, added together into one summary row for the whole project",
+        "The monthly project accounts sheet, simplified into the same fields this board uses"],
   a:0,
   why:"<b>One row, opened out, reordered.</b><br><br>The real report runs these numbers across a row, alongside a dozen more, with a row for every job.<br><br>Two of the wrong answers are worth holding on to. It is <b>not</b> in the report's own order: the report leads with the result, this board ends with it, and closing that gap is what the 700 level is for. And it is <b>not</b> the monthly project accounts sheet, which uses a different word for several of these same numbers.",
   src:["report","names"]}
@@ -653,6 +689,15 @@ const SECTIONS=[
  {id:"origin.intro", kind:"concept",
   title:"Seven numbers describe a job.",
   body:"That is the whole page, for now.<br><br><b>Three of them arrive from somewhere outside this page.</b> A signed contract, a timesheet system, a person's judgement.<br><br><b>Four are worked out from those three</b>, by arithmetic, right here on the page.<br><br>This section is only about where each number comes from. No arithmetic yet."},
+
+ /* P5-2 · moved to the FRONT of the level. This card used to sit at the very
+    end, defining vocabulary that had by then already been used thirty-plus
+    times without a name — a debrief rather than a door. It belongs here,
+    before any of those words get used even once. */
+ {id:"origin.words", kind:"concept",
+  title:"A few words, before any of them get used.",
+  body:"One name each, because the same quantity has several names in the room and you need exactly one to say out loud.<br><br><b>Say “claimed revenue”.</b> It is the real column heading. You will also hear it called revenue, earnings, reported income, and “what the job has earned”. All the same number.<br><br><b>Say “spent”, or “JTD COST”.</b> Job to date cost.<br><b>Say “billed”, or “INV”.</b> Invoiced. You meet the actual INV field at the 500 level; the word is worth having now.<br><br>One word to be careful with. <b>“Booked”</b> gets used for two different things. Booking <i>hours</i> to a job means filling in a timesheet, and it pushes cost up. Booking <i>revenue</i> means recording income. Same word, opposite sides of the page. If somebody says booked, ask which.<br><br>And the abbreviations, spelled out once each: <b>JTD</b> job to date. <b>ETC</b> estimate to complete. <b>EAC</b> estimate at completion. <b>INV</b> invoiced. <b>WIP</b> work in progress. <b>ASR</b> additional service request. <b>FRS 102</b> is a UK accounting standard Buro Happold adopted in May 2026; it adds an adjustment on top of these numbers at project level and does not change the calculation you are about to learn. It gets its own level, and that level is not built yet.",
+  src:["names"]},
 
  {id:"origin.worked", kind:"worked", state:FOXGLOVE, blank:true,
   title:"The three that arrive from outside.",
@@ -678,27 +723,27 @@ const SECTIONS=[
  {id:"origin.fee.q", kind:"choice", state:FOXGLOVE,
   q:"What has to happen for the fee on the whole <b>project</b> to change?",
   opts:["The client agrees it in writing, normally through an Additional Service Request",
-        "The Project Director revises it at the monthly plan review",
-        "It rises on its own once the forecast of remaining cost rises",
-        "Finance recalculates it at each month end"],
+        "The Project Director revises it at the monthly plan review, without needing client sign-off",
+        "It rises on its own once the forecast of remaining cost rises past the current fee",
+        "Finance recalculates it at each month end, based on cost spent so far"],
   a:0,
   why:"<b>The client agrees it, in writing.</b><br><br>An Additional Service Request is the normal route. It has to be clear on scope, on fee and fee type, and on schedule, and it refers back to the base contract. A Partner signs it; a Project Director may co-sign with the Partner's approval.<br><br>The rule, in the Business Rules' own words: <b>“Work should not commence on ASRs until written approval is received.”</b> There is a narrow at-risk route if it has to, and it carries a clause worth knowing on this of all boards: <b>the fee is not increased, and revenue is not claimed, until the written approval arrives.</b><br><br>So nothing you are about to learn can move the project fee.",
   src:["fee"]},
 
  {id:"origin.fee.edge", kind:"choice", state:FOXGLOVE,
   q:"<b>{job}</b> is one job inside a project that has several. The contract has not changed and the client has not been asked for anything.<br><br>Can the fee shown against this one job change?",
-  opts:["Yes. At job level the fee is a slice of the project total, and slices can be moved between jobs or drawn from the project's contingency",
-        "No. A fee is contractual, so it cannot move without the client",
-        "Only downwards, and only if the job has over-run",
-        "Only at the end, when the project is reconciled"],
+  opts:["Yes. Job level fee is a slice of the project total, and slices can move",
+        "No. A fee is contractual, so nothing below the project level can move it without the client",
+        "Only downwards, and only if the job has already over-run its own slice",
+        "Only at the end of the project, once every job has been reconciled"],
   a:0,
-  why:"<b>Yes, and this is the trap sitting inside the word “fee”.</b><br><br>The <b>project</b> fee is the contract, and only the client moves it. The <b>job</b> fee is an allocation of that contract across the jobs underneath it, and reallocating it is ordinary monthly work: Task 2 of the Project Director Checklist is exactly this, checking fees allocated for expenses, checking additional fees are allocated correctly, and checking the invoice schedule still matches the total fee allocated.<br><br>One word, two meanings: a contract one level up, a bookkeeping decision one level down. When somebody says the fee changed, the first question is which one.",
+  why:"<b>Yes, and this is the trap sitting inside the word “fee”.</b><br><br>The <b>project</b> fee is the contract, and only the client moves it. The <b>job</b> fee is an allocation of that contract across the jobs underneath it, and reallocating it is ordinary monthly work, including drawing extra fee for one job out of the project's contingency: Task 2 of the Project Director Checklist is exactly this, checking fees allocated for expenses, checking additional fees are allocated correctly, and checking the invoice schedule still matches the total fee allocated.<br><br>One word, two meanings: a contract one level up, a bookkeeping decision one level down. When somebody says the fee changed, the first question is which one.",
   src:["fee"]},
 
  /* ── UNIT 2 · JTD COST ──────────────────────────────────────────────── */
  {id:"origin.jtd.card", kind:"concept", state:FOXGLOVE,
   title:"JTD COST: nobody types it in.",
-  body:"<b>JTD COST</b> is short for <b>job to date cost</b>. On {job} it reads {jtd}.<br><br>Nobody typed that. It is a running total that fills itself, out of two places:<br><br><b>TIME COST</b>, every hour anybody books to this job on a timesheet, turned into money.<br><b>SUBS &amp; EXP</b>, every sub-consultant invoice and every expense.<br><br>On the real report those are two separate columns, 13 and 14, and JTD COST is a third at column 15 sitting directly beside them. This board shows only the total, because the arithmetic is easier to follow with fewer boxes. You meet all three together at the 700 level.<br><br>The next card is the one this app used to skip: how an hour turns into a dollar.",
+  body:"<b>JTD COST</b> is short for <b>job to date cost</b>. On {job} it reads {jtd}.<br><br>Nobody typed that. It is a running total that fills itself, out of two places:<br><br><b>TIME COST</b>, every hour anybody books to this job on a timesheet, turned into money.<br><b>SUBS &amp; EXP</b>, every sub-consultant invoice and every expense.<br><br>On the real report those are two separate columns, 13 and 14, and JTD COST is a third at column 15 sitting directly beside them. This board shows only the total, because the arithmetic is easier to follow with fewer boxes. You meet all three together at the 700 level.<br><br>The next card is worth reading slowly: how an hour turns into a dollar.",
   src:["names"]},
 
  {id:"origin.jtd.hour", kind:"concept", state:FOX_CREW,
@@ -709,21 +754,21 @@ const SECTIONS=[
  {id:"origin.jtd.q", kind:"choice", state:FOX_CREW,
   q:"On {job}, {c1.who} and {c3.who} landed <b>the same money</b> on the job. One of them booked three times as many hours as the other.<br><br>How?",
   opts:["Their hours cost different amounts, so it takes three times as many of the cheaper ones to reach the same money",
-        "The cheaper person is charged to the client at a lower rate, so the job earns less from them",
-        "The board rounds small amounts together",
-        "The project director's figure includes the sub-consultant invoices"],
+        "The cheaper person is charged to the client at a noticeably lower rate, so the job earns less overall from them",
+        "The board silently rounds small amounts together before it draws the running total for the month",
+        "The project director's own figure includes the sub-consultant invoices booked earlier this month"],
   a:0,
   why:"<b>{c1.who} costs {c1.rate} an hour. {c3.who} costs {c3.rate} an hour.</b><br><br>{c1.hrs} hours of the first is {c1.cost}. {c3.hrs} hours of the third is {c3.cost}. Same money, three times the hours.<br><br>The second wrong answer is the one worth naming out loud. What the <b>client</b> is charged is a different and higher rate, and none of it appears anywhere on this board. This board is costs. Earning happens through a separate calculation, and that calculation is the whole of the 200 level.",
   src:["hours"]},
 
  {id:"origin.jtd.who", kind:"choice", state:FOXGLOVE,
   q:"Who types JTD COST into the system?",
-  opts:["Nobody. It is a running total of timesheet hours, sub-consultant invoices and expenses",
-        "The Project Director, at the monthly review",
-        "Finance, at month end",
-        "Whoever raises the invoice"],
+  opts:["Nobody. It is a running total that fills itself in",
+        "The Project Director, in person, at the monthly plan review",
+        "Finance, once a month, at month end",
+        "Whoever raises the invoice on the job"],
   a:0,
-  why:"<b>Nobody. It accumulates.</b><br><br>That matters more than it sounds, because it makes JTD COST the one number here that <b>nobody can revise</b>. The fee is a contract. The forecast, which is next, is an opinion. Money already spent is a record of what happened.<br><br>Keep it. Later, when a figure has moved and you cannot see why, JTD COST is the field to look at first. If it has not moved, no money moved.",
+  why:"<b>Nobody. It accumulates</b>, out of timesheet hours, sub-consultant invoices and expenses.<br><br>That matters more than it sounds, because it makes JTD COST the one number here that <b>nobody can revise</b>. The fee is a contract. The forecast, which is next, is an opinion. Money already spent is a record of what happened.<br><br>Keep it. Later, when a figure has moved and you cannot see why, JTD COST is the field to look at first. If it has not moved, no money moved.",
   src:["names"]},
 
  /* ── UNIT 3 · ETC COST ──────────────────────────────────────────────── */
@@ -733,28 +778,51 @@ const SECTIONS=[
 
  {id:"origin.etc.list", kind:"concept", state:FOXGLOVE,
   title:"ETC is not a feeling. It is a priced list.",
-  body:"This is the most useful sentence in the level, and the app used to leave it out entirely.<br><br><b>ETC COST falls out of the project plan.</b> Hours planned per person for the work still to come, priced at their internal rates, plus the expenses and sub-consultant invoices still to come. That list, added up, is ETC COST. Buro Happold's own words for it are <i>“your future planned costs... as per our plans”</i>, and the firm requires every workstage where costs are expected to carry one.<br><br><b>Why you need it now.</b> At the 300 level you will be told that doing planned work cuts ETC COST by the same amount it adds to JTD COST. That is not a convention somebody invented. If the plan said an engineer would spend forty hours next month and the engineer spends them, those hours leave the list of work still to come and join the record of work already done. Same hours, priced the same way, moving from one column to the other.<br><br>Without the list, that is an assertion you have to swallow. With it, it is obvious.",
+  body:"This is the most useful sentence in the level.<br><br><b>ETC COST falls out of the project plan.</b> Hours planned per person for the work still to come, priced at their internal rates, plus the expenses and sub-consultant invoices still to come. That list, added up, is ETC COST. Buro Happold's own words for it are <i>“your future planned costs... as per our plans”</i>, and the firm requires every workstage where costs are expected to carry one.<br><br><b>Why you need it now.</b> At the 300 level you will be told that doing planned work cuts ETC COST by the same amount it adds to JTD COST. That is not a convention somebody invented. If the plan said an engineer would spend forty hours next month and the engineer spends them, those hours leave the list of work still to come and join the record of work already done. Same hours, priced the same way, moving from one column to the other.<br><br>Without the list, that is an assertion you have to swallow. With it, it is obvious.",
   src:["etclist"]},
 
  {id:"origin.etc.q", kind:"choice", state:FOXGLOVE,
   q:"Which of these makes ETC COST fall?",
-  opts:["Somebody doing work that was on the plan, so it comes off the list of work still to come",
-        "Sending an invoice to the client",
-        "Issuing the drawings",
-        "The client paying an invoice"],
+  opts:["Somebody doing work that was already on the plan",
+        "Sending an invoice to the client for work already done",
+        "Issuing the drawings once a milestone is complete",
+        "The client paying an invoice that was already sent"],
   a:0,
-  why:"<b>Doing planned work.</b> The plan holds the work still to come, priced. Doing a piece of it takes that piece off the list.<br><br>The other three all really happen on a job, and not one of them touches the plan. Invoicing is the 500 level, and it moves nothing at all on the cost side. Issuing the drawings is the 300 level, and the fact that it moves nothing at all is the point of that entire level.",
+  why:"<b>Doing planned work.</b> The plan holds the work still to come, priced. Doing a piece of it takes that piece off the list of work still to come and onto the record of work already done.<br><br>The other three all really happen on a job, and not one of them touches the plan. Invoicing is the 500 level, and it moves nothing at all on the cost side. Issuing the drawings is the 300 level, and the fact that it moves nothing at all is the point of that entire level.",
   src:["etclist"]},
 
  {id:"origin.opinion", kind:"choice", state:FOXGLOVE,
   q:"ETC COST, the estimate of what is still left to spend, is the one number here that is somebody's opinion. Why?",
   opts:["Because it is a forecast of money not yet spent, and a person has to judge it",
-        "Because finance revises it every month",
+        "Because finance quietly revises it every single month at the close, without asking anyone",
         "Because it comes from the contract, and contracts get renegotiated",
-        "Because it is calculated from the other numbers"],
+        "Because it is calculated automatically from the other numbers on the board"],
   a:0,
   why:"<b>Because it is a forecast, and a person makes it.</b><br><br>FEE is contracted. JTD COST is a record of hours already booked and invoices already received. The four dashed fields are arithmetic.<br><br>ETC COST is a judgement about a future that has not happened. On your projects, the person making that judgement is you. The 300 and 400 levels are entirely about what follows from that.",
-  src:["etclist"]},
+  src:["etclist"]}
+]},
+
+/* ═════════ 150 LEVEL ═════════
+   P5-5 · LEVEL 100 SPLIT HERE. The old single level ran seventeen steps
+   unbroken, the longest in the app and the second thing he ever opens.
+   The spec named the natural seam itself: "the three numbers from outside,
+   then the four calculated ones." Everything through origin.opinion, above,
+   stays in "origin" (still level 100) and is entirely about the three
+   numbers that arrive from outside the page — a contract, a timesheet, an
+   opinion. What follows was UNIT 4 of the old level 100, "the calculated
+   four, as a group", deliberately light content that previews which four
+   fields are arithmetic without doing any of that arithmetic yet — the 200
+   level (arith, below) is where each of the four actually gets worked out
+   by hand. That preview earns its own stop rather than riding the coattails
+   of a seventeen-step level, and 150 sits between origin (100) and arith
+   (200) without renumbering either — nothing elsewhere in the file refers
+   to a "150 level" so there is nothing to collide with. Content is
+   untouched from the old origin.calc / origin.identify / origin.finished;
+   only the section boundary moved. */
+{id:"boundary", level:150, layout:"core",
+ name:"Three In, Four Out",
+ line:"The boundary itself, before the 200 level does the arithmetic",
+ steps:[
 
  /* ── UNIT 4 · THE CALCULATED FOUR, as a group. Deliberately light: they are
       done by hand, one at a time, through the whole of the 200 level. ── */
@@ -773,12 +841,7 @@ const SECTIONS=[
   opts:["LIVE CALCULATED % COMP","EAC COST","JTD PROFIT","There is no such field"],
   a:3,
   why:"<b>There is no such field.</b> Nothing on this board looks at the drawings, and that absence is the point of the whole app.<br><br>The one that looks as though it ought to be it is <b>LIVE CALCULATED % COMP</b>. That is money spent divided by money expected to be spent. It is a <i>money</i> percentage, not a <i>work</i> percentage.<br><br>{job} has spent {jtd} of an expected {eac}, so it reads {pct}. It would read {pct} whether the drawings were finished or barely started.",
-  src:["formula","wholejob"]},
-
- {id:"origin.words", kind:"concept",
-  title:"One name each, and the ones you will hear instead.",
-  body:"Last card of the level, and it is the vocabulary, because the same quantity has several names in the room and you need exactly one to say out loud.<br><br><b>Say “claimed revenue”.</b> It is the real column heading. You will also hear it called revenue, earnings, reported income, and “what the job has earned”. All the same number.<br><br><b>Say “spent”, or “JTD COST”.</b> Job to date cost.<br><b>Say “billed”, or “INV”.</b> Invoiced. You meet it at the 500 level.<br><br>One word to be careful with. <b>“Booked”</b> gets used for two different things. Booking <i>hours</i> to a job means filling in a timesheet, and it pushes cost up. Booking <i>revenue</i> means recording income. Same word, opposite sides of the page. If somebody says booked, ask which.<br><br>And the abbreviations, spelled out once each: <b>JTD</b> job to date. <b>ETC</b> estimate to complete. <b>EAC</b> estimate at completion. <b>INV</b> invoiced. <b>WIP</b> work in progress. <b>ASR</b> additional service request. <b>FRS 102</b> is a UK accounting standard Buro Happold adopted in May 2026; it adds an adjustment on top of these numbers at project level and does not change the calculation you are learning. It gets its own level, and that level is not built yet.",
-  src:["names"]}
+  src:["formula","wholejob"]}
 ]},
 
 /* ═════════ 200 LEVEL ═════════ */
@@ -789,7 +852,7 @@ const SECTIONS=[
 
  {id:"arith.intro", kind:"concept",
   title:"Four numbers are only arithmetic.",
-  body:"Every calculated field carries its own formula printed under its name, and you will see them as the boxes fill.<br><br>This section does all four by hand, once, on a second invented job, so they stop feeling like magic."},
+  body:"Every calculated field carries its own formula printed under its name, and you will see them as the boxes fill.<br><br>This section does all four by hand, once, on a second invented job."},
 
  {id:"arith.worked", kind:"worked", state:SANDPIPER, blank:true,
   title:"A second job. Watch it build from empty.",
@@ -841,9 +904,9 @@ const SECTIONS=[
  {id:"arith.chain", kind:"choice", state:KESTREL,
   q:"You want {job}'s JTD PROFIT and nothing has been calculated yet.<br><br>Which of the four has to be worked out <b>first</b>?",
   opts:["EAC COST, because the percentage needs it, and claimed revenue needs the percentage",
-        "CLAIMED REVENUE, because profit is claimed revenue minus cost",
-        "LIVE CALCULATED % COMP, because everything else is a percentage of something",
-        "None of them. The four are worked out independently of each other"],
+        "CLAIMED REVENUE, because profit is only ever claimed revenue minus cost spent so far",
+        "LIVE CALCULATED % COMP, because everything else here is a percentage of something",
+        "None of them. The four are worked out entirely independently of each other"],
   a:0,
   why:"<b>EAC COST.</b> The four are a chain, not a list.<br><br>EAC COST needs the two cost numbers. LIVE CALCULATED % COMP needs EAC COST. CLAIMED REVENUE needs the percentage. JTD PROFIT needs claimed revenue.<br><br>Which is why one change at the top of the chain moves everything below it, and why nothing below it can move on its own.<br><br><b>Keep this as a habit.</b> When a figure has moved and you cannot see why, walk the chain upwards until you reach something that was not calculated. It will be the fee, the money spent, or the forecast, and there is nothing else it can be.",
   src:["formula"]},
@@ -855,15 +918,15 @@ const SECTIONS=[
  {id:"arith.ugly", kind:"compute", state:MARLOW, field:"pct",
   q:"A fourth job, and this one is not tidy. <b>{job}</b> has spent <b>{jtd}</b> and expects to spend <b>{eac}</b> in total.<br><br>What is LIVE CALCULATED % COMP?",
   hint:"money spent ÷ money expected in total. Round to one decimal place, or type the division itself and let it work it out.",
-  why:"<b>{pct}.</b>{FRAC}Nothing on a real report lands on a round number, and this is the first figure in this app that does not.<br><br>What matters more than the decimal is being able to say roughly where it should land before you work it out. Spent is a bit under three quarters of expected, so the answer had to be a bit under seventy-five. If your arithmetic had produced something in the thirties or the nineties, you would want to know why before repeating it to anybody.",
+  why:"<b>{pct}.</b>{FRAC}Nothing on a real report lands on a round number, and this is the first figure in this app that does not.<br><br>What matters more than the decimal is being able to say roughly where it should land before you work it out. Spent is a bit under three quarters of expected, so the answer had to be a bit under seventy-five. Knowing that range before you divide is what lets you sanity-check a real row in a few seconds, without redoing the arithmetic.",
   src:["formula"]},
 
  {id:"arith.loss", kind:"choice", state:MARLOW,
   q:"Still <b>{job}</b>. Fee <b>{fee}</b>, spent <b>{jtd}</b>, forecast <b>{etc}</b> still to go.<br><br>Its JTD PROFIT reads <b>{profit}</b>. Every job you have seen so far has been positive. What has happened?",
   opts:["It expects to cost {eac} in total, which is more than the fee, so it can claim less than it has already spent",
-        "It has already spent more than its fee",
-        "The forecast of remaining cost has been set too low",
-        "It has not invoiced enough of the fee yet"],
+        "It has already spent more money than its {fee} fee is worth in total, which is exactly what triggers the loss shown",
+        "The forecast of remaining cost has been deliberately and quietly set far too low this particular month",
+        "It has not yet invoiced enough of its {fee} fee to cover the money it has already spent so far"],
   a:0,
   why:"<b>Expected cost has gone past the fee.</b><br><br>{job} expects to cost {eac} all in, against a fee of {fee}. Claimed revenue is the percentage times the fee, and the percentage is {pct}, so the most it can claim is {rev}. It has already spent {jtd}. Claimed minus spent is {profit}.<br><br>The second answer is worth checking rather than waving away: it has spent {jtd}, which is still <i>under</i> the {fee} fee. <b>Overspending the fee is not what makes a job show a loss here. Expecting to overspend it is.</b><br><br>The loss appears the moment the forecast says it will happen, which can be months before the money actually goes out of the door. That is the single most useful thing on this screen.",
   src:["formula"]},
@@ -912,7 +975,16 @@ const SECTIONS=[
   title:"Revenue answers to money spent. Nothing else.",
   body:"This is the idea everything else hangs off, and it is the one that feels wrong the first time you meet it.<br><br><b>Finishing something moves nothing on this page. Spending does.</b>"},
 
- {id:"spend.nothing", kind:"select", state:FOXGLOVE, after:FOXGLOVE,
+ /* P7-2 · zeroMove:true marks this as a DELIBERATE zero-mover, not an
+    authoring accident. A select step's after equal to its state is exactly
+    the shape of the P7-2 defect (the app and the independent reference both
+    conclude "nothing moved", for the same wrong structural reason) UNLESS
+    the whole point of the item is that nothing moves — which is this item's
+    entire teaching point. verify_v5.js's new structural check (§4c) treats
+    every non-identify select step's after===state as a failure unless
+    zeroMove is explicitly set, so this flag is what keeps that guard from
+    flagging its own intended exception. */
+ {id:"spend.nothing", kind:"select", state:FOXGLOVE, after:FOXGLOVE, zeroMove:true,
   q:"Back on <b>{job}</b>. Today you issue the complete drawing set: a major milestone, delivered, out of the door.<br><br><b>Tap every field that moves.</b>",
   why:"<b>Nothing moved. Not one field.</b><br><br>Issuing the drawings changed no cost, so it changed no reported revenue. There is nowhere on this board to record that it happened at all.<br><br>This is why a job can feel finished and still report as though it is not.",
   src:["formula"]},
@@ -962,13 +1034,45 @@ const SECTIONS=[
 
  {id:"spend.etcwhy", kind:"choice", state:FOXGLOVE,
   q:"Why does doing <b>planned</b> work push ETC COST down by the same amount it pushes JTD COST up?",
-  opts:["Because ETC COST is a priced list of the work still to come, and a planned piece comes off that list at the price it was on it for",
-        "Because the system holds EAC COST steady by design",
-        "Because the Project Director adjusts the forecast to match",
-        "Because the fee has not changed, so the totals have to balance"],
+  opts:["Because ETC COST is a priced list, and a planned piece comes off it at its listed price",
+        "Because the system holds EAC COST steady by design, no matter what gets booked to the job",
+        "Because the Project Director manually adjusts the forecast every month to keep it matching",
+        "Because the fee itself has not changed, so the two totals underneath it have to balance out"],
   a:0,
-  why:"<b>Because ETC COST is a priced list.</b> Hours planned per person for the work still to come, priced at their internal rates, plus the expenses and sub-consultants still to come.<br><br>Do a planned piece of it and that piece leaves the list of work still to come and joins the record of work already done. Same hours, priced the same way, crossing from one column to the other. That is the entire reason EAC COST held still.<br><br>The second answer is the one to reject hardest. <b>Nothing holds EAC COST steady by design.</b> It held still because the two halves happened to move by the same amount, and you have just watched what happens when they do not.",
+  why:"<b>Because ETC COST is a priced list.</b> Hours planned per person for the work still to come, priced at their internal rates, plus the expenses and sub-consultants still to come.<br><br>Do a planned piece of it and that piece leaves the list of work still to come, at the price it was on that list for, and joins the record of work already done. Same hours, priced the same way, crossing from one column to the other. That is the entire reason EAC COST held still.<br><br>The second answer is the one to reject hardest. <b>Nothing holds EAC COST steady by design.</b> It held still because the two halves happened to move by the same amount, and you have just watched what happens when they do not.",
   src:["etclist"]},
+
+ /* P5-3 · a margin card, added before spend.losing. The item two screens from
+    here turns entirely on margin, and margin did not exist anywhere in the
+    app until that item's own "why" defined it after the fact — the first
+    encounter with the word was inside the answer to a question that had
+    already been asked and marked. This card exists so the question that
+    follows is a fair test of a taught term, not an ambush. mixed.d and
+    mixed.f, three levels on, inherit this same word already taught. */
+ {id:"spend.margin", kind:"concept", state:MARLOW,
+  title:"One word before the next screen: margin.",
+  body:"<b>Margin</b> is the gap between a job's fee and what it expects to cost in total, EAC COST.<br><br>Fee above expected cost, and the gap is <b>positive</b>: the job earns something on every dollar it claims. Fee below expected cost, and the gap is <b>negative</b>: the job loses a little on every dollar it claims back, however well the work goes and however carefully the money is spent.<br><br>{job} is a negative-margin job. Its fee is {fee}. Its expected cost, EAC COST, is {eac}. {fee} against {eac} is a gap running the wrong way.<br><br>None of this is about drawings, or about anybody's competence. It is entirely fee against expected cost, and it is the reason the next two screens behave the way they do."},
+
+ /* P5-4 · a worked example for the negative-margin job, added before
+    spend.losing. This mechanism is the app's own headline claim and, until
+    now, the only one of eight levels' worth of central claims with no worked
+    example anywhere in the file — his first encounter with it was a cold
+    four-option question. Same job, same booking, same numbers spend.losing
+    asks about a moment later: JTD +{d.jtd}, ETC -{d.etc}, EAC unchanged,
+    pct {pct}->{after.pct}, claim +{d.rev}, profit {profit}->{after.profit}. */
+ {id:"spend.worked2", kind:"worked", state:MARLOW, after:MAR_PLAN, stillLabel:"NO CHANGE",
+  title:"The same mechanism, on a job that is already losing money.",
+  setup:"{job} already shows <b>{profit}</b> of JTD PROFIT, because it expects to cost {eac} against a fee of only {fee}.<br><br>Somebody books {d.jtd} of <b>planned</b> time to it — the same kind of week that made Foxglove more profitable, two screens ago.",
+  button:"Follow it through",
+  stages:[
+   {cells:["jtd"], text:"<b>JTD COST</b> rises by {d.jtd}, to <b>{after.jtd}</b>. Money out of the door, exactly as before."},
+   {cells:["etc"], text:"<b>ETC COST</b> falls by the same {d.etc}, to <b>{after.etc}</b>. It was planned, so that piece of work leaves the list of work still to come."},
+   {cells:["eac"], text:"<b>EAC COST does not move.</b> Still {after.eac}. The money simply crossed from one side to the other, exactly as before."},
+   {cells:["pct"], text:"The top of the fraction grew and the bottom did not, so the percentage rises, {pct} to {after.pct}."},
+   {cells:["rev"], text:"<b>CLAIMED REVENUE</b> is {after.pct} of the {fee} fee, so <b>{after.rev}</b>. Up {d.rev}."},
+   {cells:["profit"], text:"And here is where it stops matching what you just watched. The claim rose {d.rev} while cost rose {d.jtd} — <i>more</i> than the claim did. <b>JTD PROFIT falls, {profit} to {after.profit}.</b>"},
+   {cells:[], text:"<b>Put FEE beside EAC COST and the reason is sitting there:</b> a {fee} fee against {after.eac} of expected cost. Expected cost is above the fee, so the gap between them — the job's own margin — is negative. Every dollar spent here claims back less than a dollar, planned or not, until the fee or the forecast changes."}
+  ], src:["formula"]},
 
  /* THE EXCEPTION, and the most useful arithmetic in the app. Nothing in v4
     could produce it, because no job in v4 was ever expected to overspend. */
@@ -1003,7 +1107,9 @@ const SECTIONS=[
   opts:["Up","Down","It does not move"], a:1,
   why:"<b>Down, {profit} to {after.profit}.</b> Nothing came off the forecast, so EAC COST rose from {eac} to {after.eac}. Both halves of the fraction grew, the claim only rose {d.rev}, and cost rose {d.jtd}."},
 
- {id:"forecast.warm.nothing", kind:"select", state:KESTREL, after:KESTREL,
+ /* P7-2 · zeroMove:true — same deliberate-exception marker as spend.nothing
+    above; see that comment for why this flag exists. */
+ {id:"forecast.warm.nothing", kind:"select", state:KESTREL, after:KESTREL, zeroMove:true,
   q:"Warm-up. <b>{job}</b> issues its full drawing set today. A real milestone, out of the door.<br><br><b>Tap every field that moves.</b>",
   why:"<b>Nothing moves.</b> No cost changed, so nothing the board calculates changed. There is nowhere on this page to record that the drawings went out."},
 
@@ -1015,8 +1121,8 @@ const SECTIONS=[
  {id:"forecast.warm.fee", kind:"choice", state:KESTREL,
   q:"Warm-up. What has to happen for the fee on the whole <b>project</b> to change?",
   opts:["The client agrees it in writing, normally through an Additional Service Request",
-        "The Project Director revises it at the monthly plan review",
-        "Finance recalculates it at month end",
+        "The Project Director revises it at the monthly plan review, without client input",
+        "Finance recalculates it at month end, once cost spent is known",
         "It rises automatically once expected cost passes it"],
   a:0,
   why:"<b>The client agrees it in writing.</b> A Partner signs the Additional Service Request, and the firm's instruction is not to start the work until written approval is in.",
@@ -1074,9 +1180,9 @@ const SECTIONS=[
  {id:"forecast.fix", kind:"choice", state:MARLOW, after:MAR_ETCFIX,
   q:"<b>{job}</b> is showing <b>{profit}</b> of JTD PROFIT, because it expects to cost {eac} against a fee of {fee}.<br><br>You could make that loss disappear this month by cutting ETC COST from {etc} to <b>{after.etc}</b>. That would put expected cost at {after.eac}, exactly the fee, and JTD PROFIT at <b>{after.profit}</b>.<br><br>Nothing about the work has changed. Should you?",
   opts:["Only if the remaining work really will cost {after.etc}. The forecast is a statement about the work, not a dial for the result",
-        "Yes. The loss is an artifact of a cautious forecast, and taking it out makes the report more accurate",
-        "Yes, but the client has to be told first",
-        "No. A forecast must never be revised downwards"],
+        "Yes. The forecast was always far too cautious at {etc}, and taking it down makes the whole monthly report noticeably more accurate",
+        "Yes, but only if the client is told about it first, since the {fee} fee itself is not changing at all",
+        "No. A forecast must never ever be revised downwards, whatever the new remaining-cost estimate would actually be"],
   a:0,
   why:"<b>Only if it is true.</b><br><br>The arithmetic is perfect and that is exactly the problem. Cutting the forecast to {after.etc} puts expected cost at {after.eac}, precisely the {fee} fee, and JTD PROFIT at {after.profit}. The loss vanishes and nobody had to do anything.<br><br>Which is why the firm's instruction on this is one sentence long: <b>do not manage the adjustment, fix the project data.</b> If the work left genuinely will cost {after.etc}, then the old forecast was wrong and correcting it is your job. If it will not, you have moved this month's number and next month it comes back larger, because the money still has to be spent.<br><br>The fourth answer is wrong too, and worth saying so out loud: forecasts get revised downwards all the time and should be. <b>The test is never the direction. It is whether the number is a description of the work.</b>",
   src:["plan"]},
@@ -1084,11 +1190,11 @@ const SECTIONS=[
  {id:"forecast.ugly", kind:"compute", state:MAR_ETCUP, field:"rev",
   q:"Different month, same job. <b>{job}</b> has now spent <b>{jtd}</b> and has raised its forecast to <b>{etc}</b> still to go. The fee is <b>{fee}</b>.<br><br>What is CLAIMED REVENUE?",
   hint:"spent, over expected in total, times the fee. You can type the whole sum as one expression and it will work it out.",
-  why:"<b>{rev}.</b> Spent {jtd} over an expected total of {eac} is {pct}, and {pct} of the {fee} fee is {rev}.<br><br>JTD PROFIT is now {profit}. Nothing was spent between the last screen and this one. The forecast went up, so the claim came down, so the loss got bigger. That is the whole lever, on a number that does not land anywhere tidy.",
+  why:"<b>{rev}.</b> Spent {jtd} over an expected total of {eac} is {pct}, rounded to one decimal for reading. The engine itself never rounds mid-calculation, so that unrounded share of the {fee} fee lands at {rev}.<br><br>If you multiply the <i>rounded</i> {pct} back out by hand you will land a few dollars short of {rev} — that gap is rounding, not a mistake, and it is exactly why the app accepts an answer close to either one on a question shaped like this.<br><br>JTD PROFIT is now {profit}. Nothing was spent between the last screen and this one. The forecast went up, so the claim came down, so the loss got bigger. That is the whole lever, on a number that does not land anywhere tidy.",
   src:["formula"]},
 
  {id:"forecast.explain", kind:"explain", state:FOXGLOVE, after:FOX_ETC90,
-  prompt:"A colleague looks at the month-end sheet and says <b>“we lost {d.rev} on {job} this month.”</b> You check, and nothing changed except ETC COST.<br><br><b>In your own words, what do you tell them?</b>",
+  prompt:"A colleague looks at the Traffic Light Report and says <b>“we lost {d.rev} on {job} this month.”</b> You check, and nothing changed except ETC COST.<br><br><b>In your own words, what do you tell them?</b>",
   model:["Nothing was actually lost. No extra money was spent, and no work was undone.",
          "The forecast of remaining cost, ETC COST, was raised from {etc} to {after.etc}.",
          "That raised EAC COST, the total expected cost, from {eac} to {after.eac}.",
@@ -1127,9 +1233,9 @@ const SECTIONS=[
  {id:"billing.warm.loss", kind:"choice", state:MARLOW,
   q:"Warm-up. <b>{job}</b> has a fee of <b>{fee}</b>, has spent <b>{jtd}</b>, and shows <b>{profit}</b> of JTD PROFIT.<br><br>Why is it negative?",
   opts:["It expects to cost {eac} in total, which is more than the fee",
-        "It has already spent more than its fee",
-        "It has not been invoiced yet",
-        "The client is disputing the work"],
+        "It has already spent more money than its {fee} fee is even worth",
+        "It has not yet been invoiced its full {fee} fee amount",
+        "The client is disputing and withholding part of the {fee} fee"],
   a:0,
   why:"<b>Expected cost is above the fee.</b> {eac} expected against a {fee} fee, so the most it can ever claim is less than it will spend.<br><br>It has spent {jtd}, which is still under the fee. Expecting to overspend is what shows the loss, not having overspent."},
 
@@ -1163,9 +1269,9 @@ const SECTIONS=[
  {id:"billing.early", kind:"choice", state:FOXGLOVE,
   q:"You persuade the client to let you invoice a big chunk of {job} early.<br><br>What happens to CLAIMED REVENUE?",
   opts:["Nothing. Invoicing does not change what the firm says it earned",
-        "It rises, because billing is how revenue gets recognised",
-        "It falls, because WIP falls",
-        "It rises next month, once the client pays"],
+        "It rises, because billing is how revenue gets recognised on this board",
+        "It falls, because WIP falls when an invoice goes out",
+        "It rises next month, once the client actually pays"],
   a:0,
   why:"<b>Nothing.</b> Earning follows money spent. Billing follows the project's invoice schedule.<br><br>Invoicing early is still worth doing, because it is cash in the door sooner. It is just not revenue.",
   src:["names"]},
@@ -1174,11 +1280,22 @@ const SECTIONS=[
   q:"{job} invoices another <b>{d.inv}</b>.<br><br><b>Tap every field that reads differently afterwards.</b>",
   why:"<b>{lmovers}. Nothing else.</b><br><br>INV goes {inv} to {after.inv}. WIP, being claimed revenue minus invoiced, falls {wip} to {after.wip}.<br><br>Everything on the earning side is untouched, because none of it knows or cares that an invoice went out."},
 
+ /* P2-1 · nine "Up / Down / It does not move" items existed before this one
+    and "It does not move" was correct on zero of them, so two tries with no
+    understanding at all cleared every single one. This is the obvious missing
+    case and it is this level's own central claim: an invoice moves INV and
+    WIP and touches nothing else. */
+ {id:"billing.profitcheck", kind:"choice", state:KESTREL, after:KES_INV, fixed:true,
+  q:"<b>{d.inv}</b> of invoice goes out on <b>{job}</b>. Nothing else happens.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"], a:2,
+  why:"<b>It does not move. Still {profit}.</b><br><br>JTD PROFIT is claimed revenue minus money spent, and neither one of those is calculated from INV. The invoice only closes the gap between what has been claimed and what has been billed, which is WIP: {wip} to {after.wip}.<br><br>This is the tell for an invoice on any sheet you read: it is the only event on this page that moves something without touching cost or the claim at all.",
+  src:["names"]},
+
  {id:"billing.sandpiper", kind:"choice", state:SANDPIPER,
   q:"On <b>{job}</b>, WIP reads {wip}, which is exactly the same as CLAIMED REVENUE. Why?",
-  opts:["Because nothing has been invoiced on it yet, so the whole claim is still sitting unbilled",
-        "Because WIP is always equal to claimed revenue until a job closes out",
-        "Because the client has been invoiced and has not yet paid that invoice",
+  opts:["Because nothing has been invoiced on it yet, so the whole claim is sitting unbilled",
+        "Because WIP is always exactly equal to claimed revenue until a job finally closes out",
+        "Because the client has been invoiced and has not yet paid that particular invoice",
         "Because the claim and the billing schedule happen to have lined up this month"],
   a:0,
   why:"<b>Because INV reads {inv}.</b> WIP is what is claimed minus what is billed, so with nothing billed at all, the whole {rev} sits claimed and unbilled.<br><br>That gap is not a mistake, it is information. On a job this early it is expected, because the invoice schedule has not started yet.<br><br>Worth knowing before you say “normal” in front of finance: their own shorthand is <b>“Neg WIP: good. Pos WIP: bad”</b>, and a positive WIP is what tells them an invoice should be raised. They are not describing an error either; they are describing which direction they would rather be facing.<br><br>The third answer is the one to keep separate in your head. Billed-and-not-paid is a real thing and it has its own column on the real report, <b>UNPAID INV</b>. It is not this.",
@@ -1187,9 +1304,9 @@ const SECTIONS=[
  {id:"billing.meaning", kind:"choice", state:FOXGLOVE,
   q:"A job's WIP has been large and growing for three months. What does that tell you, <b>on its own</b>?",
   opts:["That the claim has been running ahead of the billing for three months, and nothing beyond that",
-        "That the job is losing money, because the cash has not come in against it",
-        "That the client has been billed and is refusing to pay the invoices",
-        "That the forecast of remaining cost has been set too low"],
+        "That the job is genuinely losing real money, because the cash has not come in against it",
+        "That the client has been billed already and is refusing outright to pay the invoices sent",
+        "That the forecast of remaining cost has been quietly set far too low for three whole months now"],
   a:0,
   why:"<b>Only that the claim has run ahead of the billing.</b> That is the whole of what the column says.<br><br>It could be a billing lag, which is a cash problem worth chasing. It could be that the claim is running ahead of what you could actually defend to a client, which is a forecast problem. <b>WIP on its own does not tell you which</b>, and treating it as though it does is how people spend a fortnight chasing the wrong one.<br><br>A client who has been billed and is simply not paying is a third thing again, and it shows up under <b>UNPAID INV</b>, its own column on the real report.<br><br>Next screen: what you would actually look at to tell them apart.",
   src:["wip"]},
@@ -1197,9 +1314,9 @@ const SECTIONS=[
  {id:"billing.tell", kind:"choice", state:FOXGLOVE,
   q:"So WIP is wide and growing.<br><br><b>What would you look at to tell a billing lag from a claim running too far ahead?</b>",
   opts:["The invoice schedule, against what has been claimed. If an invoice was due and did not go out, it is a billing lag",
-        "JTD PROFIT. If it is still positive, the job is fine and the WIP will close itself",
-        "UNPAID INV. A large figure there means the claim has gone too high",
-        "EAC COST. If it has risen, the claim must have been too high all along"],
+        "JTD PROFIT, taken entirely on its own. If it is still positive, the whole job is fine and the WIP will close itself",
+        "UNPAID INV, taken entirely on its own. A large figure there means the claim itself has gone too high",
+        "EAC COST, taken entirely on its own. If it has risen recently, the claim must have been too high"],
   a:0,
   why:"<b>The invoice schedule.</b> Billing runs off it, so comparing what it said should have gone out against what actually did separates the two cases in about a minute.<br><br>If the schedule was followed and WIP is still wide, then billing is not the problem, and what you are looking at is a claim the job may not be able to defend. At that point you are back in the forecast, not the invoices.<br><br>The firm watches the two together for exactly this reason. Its own wording is that a positive and growing WIP <i>“indicates an invoice should be raised”</i>, which is a prompt to go and look, not a verdict.<br><br>UNPAID INV is a different question again: money billed and not collected. Neither of these.",
   src:["wip"]},
@@ -1218,7 +1335,19 @@ const SECTIONS=[
    completely differently: time booked with the forecast dropping, time booked
    with the forecast not dropping, a forecast revision with no spend at all,
    and an invoice. His boss will not label the lever. */
-{id:"mixed", level:600, layout:"full",
+{id:"mixed", level:600, layout:"full", bare:true,
+ /* P2-2 · this level's own premise is that nothing tells you which lever
+    moved — but it used to run every item on a board still printing every
+    formula subtitle and dashing every calculated cell, which fights the
+    level's own point twice over: it hands back the "how" scaffolding this
+    level is explicitly testing without, and it hides the very values a
+    reader would use to reason the identification out. bare:true strips the
+    formula subtitles and the dashed calc edge (see the "real" section, the
+    same treatment); the companion one-line engine change below (in
+    renderStep's mask: computation) makes bare also unmask calculated cell
+    VALUES, which is the actual fix — the values stay visible, they are just
+    not labelled as calculated for you. Do not extend bare to any teaching
+    level; it stays confined to where the point is to measure. */
  name:"Mixed, Unlabelled",
  line:"Four events that look alike, and how to tell them apart",
  warmN:2,
@@ -1244,9 +1373,9 @@ const SECTIONS=[
  {id:"mixed.warm.margin", kind:"choice", state:MARLOW,
   q:"Warm-up. <b>{job}</b> has a fee of <b>{fee}</b> and expects to cost <b>{eac}</b>.<br><br>If somebody now books planned work to it, which way does JTD PROFIT go?",
   opts:["Down. Expected cost is above the fee, so every dollar spent claims back less than a dollar",
-        "Up. Planned work always earns money",
-        "It does not move, because planned work is neutral",
-        "It depends on whether the client has been invoiced"],
+        "Up. Planned work always earns money, whatever the job's own margin happens to look like this month",
+        "It does not move at all, because planned work is always neutral to the reported profit",
+        "It depends entirely on whether the client has already been invoiced this particular month"],
   a:0,
   why:"<b>Down.</b> Expected cost of {eac} is above the {fee} fee, so the margin is negative and working to plan makes the reported loss bigger.",
   src:["formula"]}
@@ -1255,7 +1384,7 @@ const SECTIONS=[
 
  {id:"mixed.intro", kind:"concept",
   title:"Nothing here tells you which lever moved.",
-  body:"Every question so far has sat under a heading that named the thing being tested. Spending. The forecast. Billing. <b>The heading was doing half the work.</b><br><br>A month-end sheet has no headings. Four events look nearly identical on it and behave completely differently:<br><br>time booked with the forecast coming off;<br>time booked with the forecast <i>not</i> coming off;<br>a forecast revision with no spending at all;<br>and an invoice.<br><br>From here the questions describe what happened in a month and leave you to work out which of those it was. <b>That identification is the part that breaks in front of somebody else</b>, and it is the only part nothing in this app has practised.<br><br>The board is back to nine boxes, because invoices are in play again."},
+  body:"Every question so far has sat under a heading that named the thing being tested. Spending. The forecast. Billing. <b>The heading was doing half the work.</b><br><br>The Traffic Light Report has no headings like that. Four events look nearly identical on it and behave completely differently:<br><br>time booked with the forecast coming off;<br>time booked with the forecast <i>not</i> coming off;<br>a forecast revision with no spending at all;<br>and an invoice.<br><br>From here the questions describe what happened in a month and leave you to work out which of those it was. <b>That identification is the part that breaks in front of somebody else</b>, and it is genuinely harder than anything so far, because nothing tells you in advance which lever to check.<br><br>The board still carries all nine boxes, the same as the level before this one, because invoices are still in play."},
 
  {id:"mixed.a", kind:"choice", state:FOXGLOVE, after:FOX_REWORK10, fixed:true,
   q:"A month on <b>{job}</b>. <b>{d.jtd}</b> of time landed on it, and EAC COST went from {eac} to {after.eac}.<br><br>Which way did JTD PROFIT go?",
@@ -1264,7 +1393,7 @@ const SECTIONS=[
   src:["formula"]},
 
  {id:"mixed.b", kind:"select", state:KESTREL, after:KES_INV,
-  q:"A month on <b>{job}</b>. The only thing that happened was that <b>{d.inv}</b> went out to the client.<br><br><b>Tap every field that reads differently at the end of the month.</b>",
+  q:"A month on <b>{job}</b>. The only thing that happened was that <b>{d.inv}</b> was invoiced to the client.<br><br><b>Tap every field that reads differently at the end of the month.</b>",
   why:"<b>{lmovers}. Nothing else.</b><br><br>An invoice moves INV, and WIP moves because it is claimed minus billed. That is the entire footprint.<br><br>What the firm claims is untouched at {rev}, because it is calculated off cost and no cost moved. Profit is untouched at {profit}.<br><br><b>The tell for an invoice:</b> it is the only event on this page that moves anything at all without touching the cost side. If the claim did not move, no cost moved, and there is very little else it can have been.",
   src:["names"]},
 
@@ -1285,22 +1414,27 @@ const SECTIONS=[
   src:["formula"]},
 
  {id:"mixed.e", kind:"select", state:FOXGLOVE, after:FOX_PLAN10,
-  q:"A month on <b>{job}</b>. <b>{d.jtd}</b> of planned time landed. Nobody invoiced anything.<br><br><b>Tap every field that reads differently at the end of the month.</b>",
+  q:"A month on <b>{job}</b>. <b>{d.jtd}</b> of time landed. Nobody invoiced anything.<br><br><b>Tap every field that reads differently at the end of the month.</b>",
   why:"<b>{nmovers} fields move: {lmovers}.</b><br><br>Two of them are worth stopping on.<br><br><b>EAC COST does not move</b>, and that is the signature of planned work: the {d.jtd} crossed from one side of the total to the other rather than being added to it.<br><br><b>WIP moves, and nobody invoiced anything.</b> WIP is claimed minus billed, and the claim just rose, so the gap widened with the billing side untouched. <b>An invoice is not the only thing that moves WIP</b>, which is exactly why WIP on its own never tells you what happened.",
   src:["wip"]},
 
- {id:"mixed.f", kind:"choice", state:MARLOW, after:MAR_PLAN, fixed:true,
-  q:"A month on <b>{job}</b>. <b>{d.jtd}</b> of time landed, and EAC COST finished at {after.eac}, exactly where it started. Same shape as two screens ago.<br><br>Which way did JTD PROFIT go?",
+ /* P5-7 · re-cut onto KES_OVER/KES_OVER_PLAN (see the job-state comment
+    above), a different job with different numbers throughout, so this no
+    longer shares MARLOW -> MAR_PLAN with spend.losing and mixed.warm.margin,
+    and the stem no longer says "same shape as two screens ago" — which
+    handed over the identification instead of making it happen again. */
+ {id:"mixed.f", kind:"choice", state:KES_OVER, after:KES_OVER_PLAN, fixed:true,
+  q:"A different month, a different job. <b>{job}</b>. <b>{d.jtd}</b> of time landed, and EAC COST finished at {after.eac}, exactly where it started.<br><br>Which way did JTD PROFIT go?",
   opts:["Up","Down","It does not move"], a:1,
-  why:"<b>Down, {profit} to {after.profit}.</b> Same event, opposite result, and the reason is not in the event at all.<br><br>The mechanism ran exactly as before. EAC COST held still, so this was planned work; the percentage rose {pct} to {after.pct} and the claim rose {d.rev}.<br><br>But cost rose {d.jtd}, which is more. <b>This job expects to cost {after.eac} against a fee of {fee}.</b> Expected cost is above the fee, so every dollar spent claims back less than a dollar.<br><br><b>The check you cannot get from the event itself:</b> before saying which way profit went, look at EAC COST against FEE. On a healthy job, planned spending earns. On a job expecting to overspend, the same planned spending loses, every week, until the fee or the forecast changes.",
+  why:"<b>Down, {profit} to {after.profit}.</b> Work through the mechanism exactly as before, because the event itself does not tell you the answer.<br><br>EAC COST held still, so this was planned work; the percentage rose {pct} to {after.pct} and the claim rose {d.rev}.<br><br>But cost rose {d.jtd}, which is more. <b>This job expects to cost {after.eac} against a fee of {fee}.</b> Expected cost is above the fee, so every dollar spent claims back less than a dollar.<br><br><b>The check you cannot get from the event itself:</b> before saying which way profit went, look at EAC COST against FEE. On a healthy job, planned spending earns. On a job expecting to overspend, the same planned spending loses, every week, until the fee or the forecast changes.",
   src:["formula"]},
 
  {id:"mixed.g", kind:"choice", state:FOXGLOVE,
   q:"Two jobs, same month. On both of them JTD PROFIT fell.<br><br>On the first, JTD COST rose. On the second, JTD COST did not move at all.<br><br>What is the difference between them?",
   opts:["On the first, real money went out. On the second nothing physical happened, and somebody changed a forecast",
-        "The second is worse, because a fall with no spending means the client is disputing the work",
-        "The first is worse, because that money is gone and cannot be recovered",
-        "There is no difference worth acting on. Both are a fall in profit"],
+        "The second is worse, because a fall in profit with no spending at all means the client is disputing the work",
+        "The first is worse, because that money is already gone out of the door and can never be recovered",
+        "There is no real difference worth acting on here at all. Both are just a fall in reported profit"],
   a:0,
   why:"<b>Money moved on one. An opinion moved on the other.</b><br><br>JTD COST is the only field on this page that nobody can revise. If it moved, real cost landed. If it did not, whatever changed came out of the forecast, and the question becomes why the forecast changed and whether the new one is right.<br><br>They are not ranked, and the second is <b>not</b> the smaller problem. A forecast that has moved that far is telling you something about the work; it just has not cost anything yet.<br><br><b>Keep this as your first move on any sheet.</b> Profit moved: did JTD COST move? That one question splits every event on this page into two halves before you have done any arithmetic at all.",
   src:["formula"]},
@@ -1315,8 +1449,39 @@ const SECTIONS=[
   why:"<b>An invoice went out.</b> INV went {inv} to {after.inv}, and WIP, being claimed minus billed, closed by the same {d.inv}.<br><br>Rule the others out by hand. Cutting the forecast would have moved CLAIMED REVENUE, and it did not move. Cost coming off the job would have moved JTD COST and dragged the claim with it. And a client <i>paying</i> an invoice moves neither of these: payment lives in the UNPAID INV column, which is not on this board at all.<br><br><b>The tell:</b> the claim held still and WIP moved. Only billing does that.",
   src:["names"]},
 
+ /* P2-1 · the second of the two added "It does not move" items. This one is
+    a genuinely untracked event, not a masked mover: getting paid for an
+    invoice already sent lives in UNPAID INV, a column this board does not
+    carry at all, so nothing here can move. */
+ {id:"mixed.i", kind:"choice", state:KESTREL, after:KESTREL, fixed:true,
+  q:"A month on <b>{job}</b>. The client pays an invoice that has been sitting outstanding for weeks. Nothing else happens.<br><br>Which way does JTD PROFIT go?",
+  opts:["Up","Down","It does not move"], a:2,
+  why:"<b>It does not move. Still {profit}.</b><br><br>Being paid is a different event from being billed, and this board does not carry a column for it at all — it lives in <b>UNPAID INV</b> on the real report, not here. No cost moved, so the claim could not have moved, so JTD PROFIT could not have moved either.<br><br>Hold this alongside the invoice question two screens back. <b>Sending an invoice moves INV and WIP. Being paid for one moves nothing on this board at all.</b> They are not the same event, even though both involve the word “invoice”.",
+  src:["names"]},
+
+ /* P5-7 · "add one item whose correct answer is you cannot tell from this."
+    Everything before this item asks for a single, nameable cause. This one
+    genuinely has two: cost was booked AND an invoice went out, in the same
+    month, and WIP conflates both. Getting this wrong by confidently naming
+    one cause is the realistic failure this level exists to prevent. */
+ {id:"mixed.j", kind:"choice", state:MARLOW, after:MAR_COMPOUND, fixed:true,
+  q:"A month on <b>{job}</b>. JTD COST moved, an invoice went out, and WIP moved too, from {wip} to {after.wip}.<br><br>Can you tell, from that WIP movement on its own, whether billing has fallen behind or the claim is simply running ahead of it?",
+  /* P7-6/P7's new §8 measurement-bias check (verify_v5.js) caught this pair on
+     first run: the correct option was 77 characters longer than its nearest
+     distractor, a uniquely-longest-option cue of exactly the kind P2-3 fixed
+     across 23 other items. Trimmed the correct option to its core claim and
+     lengthened all three distractors with plausible-sounding qualifying
+     clauses, closing the margin without losing any option's meaning. */
+  opts:["No. WIP is claimed minus billed, and both sides moved this month, so you cannot separate them from the WIP number alone",
+        "Yes. A WIP that has moved this way always means billing has fallen behind the claim, no matter what else happened on the job this month",
+        "Yes. A WIP that has moved this way always means the claim is running too far ahead of billing to defend, regardless of any other cost movement",
+        "Yes. The direction WIP moved always tells you directly and unambiguously which side, billing or claiming, caused the change this month"],
+  a:0,
+  why:"<b>No, and this is the one to sit with.</b> Two things happened this month, not one: {d.jtd} of cost was booked, unplanned, so EAC COST rose along with it and JTD PROFIT fell to {after.profit}; and separately {d.inv} was invoiced. Both of those move WIP, in opposite directions, and the number you can see is only their net.<br><br>Exactly the same lesson from the 500 level applies here, on a harder screen: <b>WIP is a prompt to go and look, never a verdict on its own</b>, and the place to look is the invoice schedule against what was actually claimed. What you CAN say without it: JTD COST moved, so real money genuinely went out, and at least part of this fall is not a forecast opinion. What EAC COST does tells you the rest — it rose, which is how you know the cost side was unplanned.",
+  src:["wip"]},
+
  {id:"mixed.explain", kind:"explain", state:FOXGLOVE, after:FOX_REWORK10,
-  prompt:"Ron puts a month-end sheet in front of you and says <i>“three of these moved and I do not understand why.”</i><br><br><b>In your own words: what do you check, and in what order?</b>",
+  prompt:"Ron puts the Traffic Light Report in front of you and says <i>“three of these moved and I do not understand why.”</i><br><br><b>In your own words: what do you check, and in what order?</b>",
   model:["First: did JTD COST move? It is the only field nobody can revise, so if it moved, real money went out, and if it did not, an opinion changed.",
          "If JTD COST moved, the next question is what EAC COST did. If EAC COST held still, the work was on the plan and the forecast came off by the same amount. If EAC COST rose by the same amount the cost did, the work was not on the plan.",
          "If JTD COST did not move but the claim did, somebody changed the forecast, and the only question that matters then is whether the new forecast is right.",
@@ -1359,16 +1524,16 @@ const SECTIONS=[
  {id:"real.warm.margin", kind:"choice", state:R_DUNMORE, showall:true,
   q:"Warm-up. <b>{job}</b> has a fee of <b>{fee}</b> and expects to cost <b>{eac}</b> in total.<br><br>What does that tell you before you read another column?",
   opts:["It will lose money, because it expects to cost more than the {fee} it is being paid",
-        "It will make about {wip}, which is the gap it has not billed yet",
-        "Nothing yet, because {jtd} has not been spent in full",
-        "It is on target, because {eac} is close to the {fee} fee"],
+        "It will make about {wip}, which is the gap between claimed and billed it has not sent yet",
+        "Nothing can be told yet, because only {jtd} of it has been spent so far",
+        "It is on target, because {eac} sits close enough to the {fee} fee"],
   a:0,
   why:"<b>It will lose money.</b> Expected cost of {eac} is above the {fee} fee, so the most it can ever claim is less than it will have spent. JTD PROFIT reads {profit}, and it got there without anybody doing anything wrong this month.<br><br>Fee against expected cost is the first pair to read on any row."},
 
  {id:"real.warm.wip", kind:"choice", state:R_BRAMBLE, showall:true,
   q:"Warm-up. <b>{job}</b> has claimed <b>{rev}</b> and billed <b>{inv}</b>.<br><br>What is the {wip} in its WIP column?",
   opts:["Money the firm says it has earned and has not yet asked the client for",
-        "Money the client has been billed for and has not paid",
+        "Money the client has already been billed for and simply has not paid it",
         "Money the job is expected to lose by the time it finishes",
         "Money held back as contingency against the {fee} fee"],
   a:0,
@@ -1381,6 +1546,19 @@ const SECTIONS=[
   title:"The page in its own order, with nothing explained.",
   body:"Everything so far has been one job opened out, in the order the numbers are calculated, with each formula printed under its name and a <b>?</b> on every field.<br><br><b>None of that scaffolding exists on the real report.</b><br><br>From here the board switches to the real column order, the formulas come off, and the <b>?</b> goes away.<br><br>Two columns you have not seen appear. <b>TIME COST</b> is the cost of the hours booked to the job: everybody's hours, priced at their internal rate. <b>SUBS &amp; EXP</b> is everything spent that is not somebody's hours, so sub-consultant invoices, travel, printing, equipment. Added together, those two are the job's cost to date.<br><br>Which brings up the one you have leaned on all the way through. <b>JTD COST is printed on the real report</b>, at column 15, sitting directly between SUBS &amp; EXP and ETC COST. It is <b>covered up on this board, once</b>, so you can prove to yourself that you can rebuild it out of the two columns it is made of.<br><br>None of this is a trick. It is the same arithmetic, laid out the way the thing on your screen at seven in the morning lays it out.<br><br>Every job and every figure from here on is invented.",
   src:["report"]},
+
+ /* P5-6 · real.recompose moved here, immediately after real.intro and BEFORE
+    real.find. The arithmetic that makes the rest of this page readable used
+    to arrive after the item that already required reading the page — he was
+    asked to scan a five-row table for the widest WIP gap before he had ever
+    rebuilt JTD COST himself even once at this level's bare, unannotated
+    difficulty. Now he does the reconstruction first, on one row, before the
+    harder multi-row scan asks him to do it implicitly. */
+ {id:"real.recompose", kind:"compute", state:R_CEDARWAY, field:"jtd", showall:true,
+  q:"This is <b>{job}</b>, one row of the real report.<br><br><b>JTD COST is column 15 on the real page, and it is hidden on this row.</b> Work it out from what is in front of you.",
+  hint:"two of the columns in front of you, added together",
+  why:"<b>{jtd}.</b> TIME COST of {time}, plus SUBS &amp; EXP of {subs}.<br><br>That is the whole of it, and it is worth being able to do without looking, because almost everything else depends on it. LIVE CALCULATED % COMP is that figure over EAC COST. JTD PROFIT is claimed revenue minus that figure.<br><br>On the real report you would not have to work it out: column 15 gives you the total, with its two halves sitting immediately to its left. <b>Being able to rebuild it is what tells you those three columns are one idea</b> rather than three unrelated numbers that happen to sit next to each other.",
+  src:["names"]},
 
  /* THE item. If only one thing in this level survives, it is one of these two:
     the only screens in the app shaped like the artifact.
@@ -1416,12 +1594,6 @@ const SECTIONS=[
   disclosure:'<details class="src"><summary>What TIME COST and SUBS &amp; EXP mean</summary><p><b>TIME COST</b> is the cost of the hours booked to the job, priced at each person\'s internal rate — not the rate the client is charged. <b>SUBS &amp; EXP</b> is short for sub-consultants and expenses: everything spent that is not somebody\'s hours, so sub-consultant invoices, travel, printing, equipment. Added together, those two are JTD COST.</p></details>',
   src:["report"]},
 
- {id:"real.recompose", kind:"compute", state:R_CEDARWAY, field:"jtd", showall:true,
-  q:"This is <b>{job}</b>, one row of the real report.<br><br><b>JTD COST is column 15 on the real page, and it is hidden on this row.</b> Work it out from what is in front of you.",
-  hint:"two of the columns in front of you, added together",
-  why:"<b>{jtd}.</b> TIME COST of {time}, plus SUBS &amp; EXP of {subs}.<br><br>That is the whole of it, and it is worth being able to do without looking, because almost everything else depends on it. LIVE CALCULATED % COMP is that figure over EAC COST. JTD PROFIT is claimed revenue minus that figure.<br><br>On the real report you would not have to work it out: column 15 gives you the total, with its two halves sitting immediately to its left. <b>Being able to rebuild it is what tells you those three columns are one idea</b> rather than three unrelated numbers that happen to sit next to each other.",
-  src:["names"]},
-
  {id:"real.arith", kind:"select", mode:"identify", state:R_ALDER, showall:true,
   ids:["pct","rev","wip","eac","profit"],
   q:"Nothing on this page tells you which numbers were worked out and which arrived from somewhere else.<br><br><b>Tap every field the report calculated for itself.</b>",
@@ -1430,32 +1602,79 @@ const SECTIONS=[
 
  {id:"real.order", kind:"choice", state:R_ELMGROVE, showall:true,
   q:"Look at where things sit. CLAIMED REVENUE is near the front. The numbers it is calculated from are further along.<br><br>Which of these is true of this page?",
-  opts:["It prints the result before the evidence, so reading left to right you meet the answer first and the reason for it several columns later",
+  opts:["It prints the result before the evidence, so you meet the answer first, the reason later",
         "It prints the evidence first and the result last, which is the order this app taught you",
         "CLAIMED REVENUE is calculated from the two columns sitting either side of it",
-        "Columns next to each other on this page are always related"],
+        "Columns next to each other on this page are always related to one another"],
   a:0,
-  why:"<b>Result first, evidence last.</b> That is the biggest single difference between this page and the board you learned on, and it is why the board was built the other way round.<br><br>CLAIMED REVENUE is column 7, near the front. The two figures that actually produce it, <b>JTD COST at column 15 and EAC COST at 17</b>, are eight and ten columns further along, off the right-hand edge of a phone.<br><br><b>Adjacency on this page means nothing.</b> INV sits directly beside CLAIMED REVENUE and plays no part whatsoever in calculating it. They run on two different clocks, which is the whole of the 500 level.<br><br>So the translation you now do in your head every morning: find the result, then go looking rightwards for what made it.",
+  why:"<b>Result first, evidence last.</b> Reading left to right you meet the answer first and the reason for it several columns later. That is the biggest single difference between this page and the board you learned on, and it is why the board was built the other way round.<br><br>CLAIMED REVENUE is column 7, near the front. The two figures that actually produce it, <b>JTD COST at column 15 and EAC COST at 17</b>, are eight and ten columns further along, off the right-hand edge of a phone.<br><br><b>Adjacency on this page means nothing.</b> INV sits directly beside CLAIMED REVENUE and plays no part whatsoever in calculating it. They run on two different clocks, which is the whole of the 500 level.<br><br>So the translation you now do in your head every morning: find the result, then go looking rightwards for what made it.",
   src:["report","names"]},
 
  {id:"real.overrun", kind:"choice", state:R_DUNMORE, showall:true,
   q:"One row, and JTD PROFIT reads <b>{profit}</b>.<br><br>What has happened here?",
   opts:["The job expects to cost more than its fee, so it is claiming less revenue than it has already spent",
-        "The client has not paid, so profit reads negative until they do",
-        "The forecast of remaining cost has been set to zero",
-        "It has been invoiced too early, and the billing will catch up"],
+        "The client has not paid the outstanding invoices yet at all, so profit reads negative until they do",
+        "The forecast of remaining cost has somehow been set all the way down to zero this particular month",
+        "It has been invoiced too early on the schedule, and the billing will eventually catch back up"],
   a:0,
   why:"<b>It is going to lose money, and nothing about billing changes that.</b><br><br>The fee is {fee}. The job now expects to cost {eac} in total. The expected cost is above the fee, so the arithmetic cannot land anywhere good: claimed revenue is {rev} against {jtd} already spent, which puts JTD PROFIT at {profit}.<br><br>Check the cash side and it is fine. {inv} has been invoiced and WIP is only {wip}, so billing is running roughly in step with the claim. Cash is not the problem here.<br><br><b>This is the row a boss stops on.</b> Every other job in this app has been healthy, and healthy rows are not the ones you get asked about.",
   src:["formula"]},
 
+ /* P5-9 · SPLIT real.spoken INTO TWO STEPS. It used to collect the main
+    answer and the follow-up in one textarea, graded against one
+    undifferentiated six-point model list — but the follow-up ("so do we
+    stop billing?") is a genuinely separate question with its own three
+    points, and cramming both into one box meant the checklist could never
+    say which HALF was missing. Now two explain steps in sequence: the
+    engine already gates step N+1 behind step N via normal nextStep() flow,
+    so "the follow-up presented only after the first is committed" falls
+    out of ordinary section-step order, no new engine logic required. */
  {id:"real.spoken", kind:"explain", state:R_DUNMORE,
-  prompt:"Ron has the Traffic Light Report open, points at <b>{job}</b>, and says: <i>“This one's showing a loss. What's going on?”</i><br><br>You have about thirty seconds and no notes. <b>Type what you would say.</b><br><br>Then answer his follow-up: <i>“So do we stop billing?”</i>",
+  prompt:"Ron has the Traffic Light Report open, points at <b>{job}</b>, and says: <i>“This one's showing a loss. What's going on?”</i><br><br>You have about thirty seconds and no notes. <b>Type what you would say.</b>",
   model:["The fee on this job is {fee}, and we now expect it to cost {eac} to finish. That is the whole problem in one sentence: the expected cost is above the fee.",
          "Revenue is claimed as cost spent divided by cost expected in total, times the fee. So we have claimed {rev} against {jtd} already spent. Claimed minus spent is {profit}, and that is the loss he is looking at.",
-         "It is not a billing problem. We have invoiced {inv} and WIP is only {wip}, so billing is running roughly in step with the claim.",
-         "So no, we do not stop billing. Billing does not change what the job has earned; it only changes when the cash arrives. Stopping would make the cash worse and leave the loss exactly where it is.",
+         "It is not a billing problem. We have invoiced {inv} and WIP is only {wip}, so billing is running roughly in step with the claim."]},
+
+ {id:"real.spoken.follow", kind:"explain", state:R_DUNMORE,
+  prompt:"Ron follows up: <i>“So do we stop billing?”</i><br><br><b>Type what you would say.</b>",
+  model:["No, we do not stop billing. Billing does not change what the job has earned; it only changes when the cash arrives. Stopping would make the cash worse and leave the loss exactly where it is.",
          "The two things that would actually move it are the fee and the forecast. Either the remaining work will cost less than we currently think, in which case the ETC is wrong and I need to fix the plan; or the scope has grown, in which case this is an Additional Service Request conversation with the client.",
-         "And I should say which of those I think it is, because that is the next question."]}
+         "And I should say which of those I think it is, because that is the next question."]},
+
+ /* P5-8 · A CLOSING CARD, RE-OPENABLE, NO NUMBERS. The stated goal of this
+    whole level is a cold thirty-second explanation, and until now the app
+    never handed him that as a plain card he could come back to later —
+    only as a live textarea tied to one specific invented job's figures.
+    This is the same chain with every token stripped out, so it reads as
+    the reusable SHAPE of the answer rather than one job's arithmetic.
+    Deliberately a `concept` step: no board, no tokens, just the chain, so
+    re-opening it later never depends on a saved state. */
+ {id:"real.spoken.card", kind:"concept",
+  title:"The whole chain, cold — no numbers, just the shape of it.",
+  body:"A job reads as a loss when its expected total cost is above its fee. That is the one-sentence diagnosis, before anything else gets said.<br><br>"
+      +"Claimed revenue is the share of cost spent so far against the cost expected in total, times the fee — so claimed revenue can already sit below what has actually been spent, and that gap is the loss on the page.<br><br>"
+      +"That gap is not a billing problem. Invoicing and WIP can be running in step with the claim even while the job is losing money, so the cash side can be perfectly healthy while the job itself is not.<br><br>"
+      +"So the answer to “do we stop billing” is no. Billing changes when cash arrives, not what the job has earned; stopping it only makes the cash worse and leaves the loss exactly where it was.<br><br>"
+      +"The two things that actually move the loss are the fee and the forecast: either the remaining work turns out to cost less than currently expected, or the scope has grown and it becomes an Additional Service Request conversation with the client.<br><br>"
+      +"And the real answer names which of those two it is — that is always the next question."},
+
+ /* P5-1 · model.who AND model.names, RELOCATED HERE VERBATIM FROM LEVEL 000.
+    Both are real and both earn a place — just not as the second and fourth
+    unbroken reading card before anything has happened. Landing here, at the
+    close of the level that puts him back in front of the real, unannotated
+    report, four of the five checklist items and all six renamed columns
+    finally refer to something he has actually done rather than words he is
+    meeting cold. Content is untouched from the 000-level originals; only
+    the position moved. */
+ {id:"model.who", kind:"concept",
+  title:"Somebody is accountable for reading it. On your own projects that is you.",
+  body:"The <b>Project Director</b> works from this report.<br><br>Buro Happold's own guidance sets that inside a five-task monthly routine called the <b>Project Director Checklist</b>. Reviewing the Traffic Light Report is Task 3, and the five checks listed under it are: <b>EAC profit percentage, with contingency spent</b>, against the target profit percentage; <b>JTD profit percentage</b> against that same EAC profit percentage; unpaid invoices; cash lock-up against maximum cash lock-up; and WIP.<br><br>They are percentages, not amounts, and the “with contingency spent” qualifier on the first one is the firm's wording, not a detail.<br><br>Note the two different clocks. <b>The report lands daily. The decision it feeds is monthly.</b> The firm's wording is that completing the checklist by the 25th of each month “remains recommended best practice”.",
+  src:["checklist"]},
+
+ {id:"model.names", kind:"concept",
+  title:"There is a second sheet, and it uses different words for the same numbers.",
+  body:"The <b>monthly project accounts sheet</b> is a different document, and it does not share the Traffic Light Report's vocabulary.<br><br>What the Traffic Light Report calls <b>CLAIMED REVENUE</b>, that sheet calls <b>Revenue</b>. <b>TIME COST</b> becomes <b>Time Costs</b>. <b>ETC COST</b> becomes <b>ETC</b>. <b>SUBS &amp; EXP</b> becomes <b>Subs &amp; Exps</b>. <b>LIVE CALCULATED % COMP</b> becomes <b>% Comp</b>. And <b>EAC COST</b> is not printed on it at all.<br><br>Same numbers. Two vocabularies.<br><br>You are being told this now so it cannot ambush you later. This app teaches the Traffic Light Report names and only those, because that is the page a Project Director works from. Translating between the two sheets is its own lesson, and it is not this one.",
+  src:["names"]}
 ]}
 ];
 
@@ -1464,17 +1683,22 @@ const SECTIONS=[
    No answer key is ever written down. Every asserted value is produced
    by derive() at render time, from the same state the board draws from.
    ═══════════════════════════════════════════════════════════════════ */
-/* v5.1-partial, and the label is deliberate.
-   IN: P0 (both showstoppers), P1 (every accuracy finding, including the false
-   claim that JTD COST is absent from the real report, when it is column 15),
-   P3 (the whole re-entry cluster), P7-3 and P7-5. Every one of those shipped
-   with a test that was proven by seeding the original defect and watching it
-   fail.
-   NOT IN: P2 measurement, P4 interaction and mobile, P5 content and curriculum,
-   P6 accessibility, P7-1/2/4/6.
-   Calling this "v5.1" would tell the next session the remediation shipped
-   complete. It did not. */
-const BUILD = "v5.1-partial · built 260803 2328 ET";
+/* v5.1 — the full remediation spec (Money_Puzzles_v5.1_Remediation_Spec_v1_260803_2100.md),
+   ALL of it, now shipped. P0 (both showstoppers), P1 (every accuracy finding),
+   P2 (all 8 measurement items), P3 (the whole re-entry cluster), P4
+   (interaction and mobile), P5 (all 13 content/curriculum items, including
+   the two structural splits: level 000 cut to two cards with model.who/
+   model.names relocated to the end of level 700, and level 100 split into
+   "origin" + a new level 150 "boundary"), P6 (all 4 accessibility fixes,
+   plus the pre-existing P4-7 fix re-verified for P6-4), P7 (all 6 items,
+   including two NEW permanent structural guards added this session:
+   verify_v5.js §4c for P7-2's zero-mover flag, and §8 formalizing the
+   P2-3/P2-4 option-bias checks that were previously a throwaway script).
+   Every fix in every P-section carries a named regression test in
+   smoke_v5.js or a structural assertion in verify_v5.js, each citing the
+   defect it guards, each proven by seeding the original defect on a temp
+   copy and watching it fail before being reinstated. Both suites green. */
+const BUILD = "v5.1 · built 260807 0740 ET";
 
 /* One caption per level. NOT rendered on the map since P4-10 (260804): six of
    its eight values were just the section name lowercased, printed a second
@@ -2050,6 +2274,10 @@ function showDef(id, trigger){
   if(ae && (ae.tagName==="INPUT" || ae.tagName==="TEXTAREA")) return;
   const c=CMAP[id]; if(!c||!c.def) return;
   suppressUntil=Date.now()+400; lastTrigger=trigger||null;
+  /* P6-3 · short accessible name, set fresh per field; the full definition
+     stays in defBody, now reached via aria-describedby instead of being the
+     dialog's own name. */
+  $("defTitle").textContent=c.k+", definition";
   $("defBody").innerHTML=c.def;
   $("defWrap").style.display="flex";
   $("defClose").focus();
@@ -2176,9 +2404,14 @@ function render(){
 
   /* `showall` un-masks the calculated cells on a question screen. It is used
      only on orientation items, where the question is about what the board IS
-     rather than about a value on it, and a row of dots would be noise. */
+     rather than about a value on it, and a row of dots would be noise.
+     P2-2 · a `bare` step or section also un-masks. Level 600's whole premise
+     is identifying an unlabelled event; dashing the calculated cells hid the
+     very evidence that identification runs on, on top of the formula
+     subtitles bare mode already strips. A masked-AND-unlabelled cell tests
+     nothing bare mode does not already test twice. */
   drawBoard(step.state,{layout:sec.layout,
-                        mask: step.showall ? [] : hiddenCalc(sec.layout),
+                        mask: (step.showall || bareOn(step)) ? [] : hiddenCalc(sec.layout),
                         tappable:step.kind==="select", bare:bareOn(step)});
   setMode(step.kind==="select" ? step : null);
 
@@ -2295,9 +2528,22 @@ function showStage(i){
 
 /* ---------- grading. Answers are stored, not views. ---------- */
 function msg(html,cls){ const m=$("msg"); if(m) m.innerHTML='<div class="'+(cls||"warn")+'">'+html+'</div>'; }
-/* a1 — FIRST-ATTEMPT correctness, written once and never overwritten.
+/* a1 — FIRST-ATTEMPT correctness, written once PER SESSION.
    Unlimited retries are the design, so without a1 the app could only ever say
    "resolved", which is a record of persistence rather than of knowing.
+
+   P2-6 · A1 MUST NOT BE A LIFE SENTENCE. v5.1-partial wrote a1 once ever,
+   for the lifetime of the save: an item missed on the very first day he ever
+   opened the app stayed a1=0 for ever, even after he had since answered it
+   right every single time. Surfacing that (P2-5) would have told him, months
+   into using this as a resource, that he still did not know something he had
+   long since mastered. NOTED_THIS_SESSION tracks which ids have had a first
+   attempt noted in THE CURRENT PAGE LOAD ONLY — it is never persisted and it
+   is not a clock, it just names "this visit" the way SESSION_SEED already
+   does. The first real attempt on a step EACH SESSION overwrites a1 with
+   that session's own first-attempt result, so a1 always reads "was I right
+   the first time I met this, most recently" rather than "was I ever wrong
+   on it once, years ago".
 
    IT CANNOT LIVE IN grade(). A first wrong answer never reaches grade(): it
    short-circuits into the one-more-try message, so by the time grade() runs
@@ -2306,16 +2552,20 @@ function msg(html,cls){ const m=$("msg"); if(m) m.innerHTML='<div class="'+(cls|
    choice items. noteFirst() is therefore called on EVERY real attempt, before
    the retry branch — and never on an unreadable entry or an empty submit,
    because those are not answers. */
+const NOTED_THIS_SESSION = new Set();
 function noteFirst(step, ok){
-  const prev=ST[step.id]||{};
-  if(prev.a1===undefined) rec(step.id,{a1: ok?1:0});
+  if(NOTED_THIS_SESSION.has(step.id)) return;
+  NOTED_THIS_SESSION.add(step.id);
+  rec(step.id, {a1: ok?1:0});
 }
 function grade(ok){
   const step=cur();
   answered=true;
-  const prev=ST[step.id]||{};
   const patch={a:ok?1:0, n:tries+1, v:1};
-  if(prev.a1===undefined) patch.a1 = ok?1:0;   // belt and braces
+  if(!NOTED_THIS_SESSION.has(step.id)){        // belt and braces
+    NOTED_THIS_SESSION.add(step.id);
+    patch.a1 = ok?1:0;
+  }
   rec(step.id, patch);
   bumpHW();
   return ok;
@@ -2336,11 +2586,20 @@ function revealBoard(step, keepChosen){
     visibleIds(sec.layout).forEach((id,k)=>setCell(id, step.state, step.after||step.state,
       {stillLabel:step.stillLabel||"NO CHANGE", delay:k*120}));
   }
+  /* P6-2 · aria-pressed used to go on ONLY the chosen cells here (set to
+     "true"), while every other cell's .cellhit button — redrawn by drawBoard()
+     just above with no `tappable` flag — carries no aria-pressed attribute at
+     all. Visually identical buttons, one exposed to a screen reader as a
+     pressed toggle and the rest not exposed as toggles at all. This board is
+     no longer interactive at the reveal stage — the question is already
+     answered — so a pressed STATE has nothing left to be true or false about.
+     Fix picked per spec's own first option: strip it entirely, matching what
+     markRows() already does for the row-pick reveal (visual + text marks
+     only, no aria-pressed anywhere). The "chosen" class stays: it drives a
+     visual + text cue (P6-5), which is a different, still-correct mechanism. */
   (keepChosen||[]).forEach(id=>{
     const el=$("cell-"+id); if(!el) return;
     el.classList.add("chosen");
-    const hit=el.querySelector(".cellhit");
-    if(hit) hit.setAttribute("aria-pressed","true");
   });
 }
 /* P3-7 · the tally is restated directly under the red band, where it has not
@@ -2521,10 +2780,27 @@ function submitNum(){
   }
   const target=computeAnswer(step), c=CMAP[step.field];
   const hadPct = raw.indexOf("%")>=0;
+  /* P2-7 · CHAINED-PERCENTAGE CEILING. A money field derived from a percentage
+     (CLAIMED REVENUE = LIVE CALCULATED % COMP × FEE) can land more than $1 away
+     from the exact answer if a learner follows the app's OWN printed method:
+     round the percentage to one decimal for reading (pctS does exactly that),
+     then multiply by the fee. On forecast.ugly that gap is $42 — measured, not
+     guessed — and a learner doing the arithmetic the way the app just taught it
+     was being marked wrong for it. The tolerance is the span between the exact
+     answer and the answer the displayed rounding produces, computed fresh from
+     derive() every time, never a hand-typed number. Fields other than rev keep
+     the original ±$1: only a percentage-chained field can produce this gap. */
+  let moneyTol=1;
+  if(c.fmt!=="pct" && step.field==="rev" && step.state){
+    const s=derive(step.state);
+    const roundedPct=Math.round(s.pct*1000)/1000;   // matches pctS's own 1-decimal rounding
+    const altTarget=roundedPct*s.fee;
+    moneyTol=Math.max(1, Math.abs(target-altTarget));
+  }
   const ok = c.fmt==="pct"
     ? (hadPct ? Math.abs(n-target*100)<=0.1
               : (Math.abs(n-target*100)<=0.1 || Math.abs(n-target)<=0.001))
-    : Math.abs(n-target)<=1;
+    : Math.abs(n-target)<=moneyTol;
   noteFirst(step, ok);
   if(!ok && tries===0){
     tries=1;
@@ -2555,10 +2831,14 @@ function showModel(){
   const step=cur();
   const txt=($("txtin")&&$("txtin").value)||"";
   rec(step.id,{txt:txt, v:1});
+  /* P5-11 · GATE THE CONFIDENCE TAP ON NON-EMPTY TEXT. A blank submission used
+     to ask "could you say that cold?" anyway, which produces a confidence
+     datum with nothing behind it — there is nothing to compare "yes" or "not
+     yet" against if he wrote nothing. Nobody has committed to anything, so
+     nobody is asked to rate their own confidence in it. */
+  if(!txt.trim()){ revealModel(); return; }
   $("panel").innerHTML='<div class="verdict s" role="status">Before you look</div>'
-    +'<div class="body">'+(txt.trim()
-        ? 'You have written it down. The model answer is on the next tap.'
-        : 'You did not write anything, which is fine. The model answer is on the next tap.')
+    +'<div class="body">You have written it down. The model answer is on the next tap.'
     +'<br><br><b>Could you say that out loud to Ron right now, cold, with the report open in front of him?</b></div>'
     +'<div class="opts" id="preopts">'
       +'<button class="opt" type="button" onclick="preAns(1)">Yes</button>'
@@ -2601,7 +2881,17 @@ function scoreChk(){
   const step=cur(), r=ST[step.id]||{};
   const boxes=[...document.querySelectorAll(".chklist .chk")];
   const hit=boxes.filter(b=>b.classList.contains("on")).length;
-  rec(step.id,{chk:hit, chkn:boxes.length});
+  /* P5-10 · STORE WHICH POINTS, NOT JUST HOW MANY. chk/chkn alone could only
+     ever say "3 of 6" — it is the count of a pattern the app had no way to
+     name. hitIdx is the 0-based index of every point actually ticked, on
+     THIS explain step; missedIdx is its complement. This is the only data
+     that could ever support "the EAC-versus-fee point was missing from three
+     of your four explanations" — a claim about WHICH point, repeated across
+     several explain steps, that a bare count can never answer. Nothing reads
+     this across steps yet; storing it is what makes that possible later. */
+  const hitIdx=boxes.map((b,i)=>b.classList.contains("on")?i:-1).filter(i=>i>=0);
+  const missedIdx=boxes.map((b,i)=>i).filter(i=>hitIdx.indexOf(i)<0);
+  rec(step.id,{chk:hit, chkn:boxes.length, hitIdx, missedIdx});
   if(!hit){ msg("Nothing ticked yet.","hint"); return; }
   /* the gap between what he said he could do and what he actually covered */
   let line = hit+" of "+boxes.length+" points covered.";
@@ -2660,6 +2950,15 @@ function renderMap(){
   $("topbtn").style.display="none";
   const totalSc=SECTIONS.reduce((n,s)=>n+s.steps.filter(x=>isScored(x)&&!x.warm).length,0);
   const rightSc=SECTIONS.reduce((n,s,i)=>n+secStat(i).right,0);
+  /* P2-5 · a1 was correctly engineered, write-once-per-session, preserved by
+     retry() — and shown nowhere. Every OTHER number on this screen reads
+     eventual correctness, which converges to 100% for everyone given
+     unlimited retries. This is the one honest first-attempt number in the
+     file. It only became safe to surface after P0-2 fixed the shuffle: before
+     that a low score here would have been reading how well he could guess
+     display position 3, not what he knew. */
+  const firstRight=SECTIONS.reduce((n,s)=>n+s.steps.filter(x=>isScored(x)&&!x.warm
+    &&ST[x.id]&&ST[x.id].a1===1).length,0);
   const touched=Object.keys(ST).length>0;
   /* P4-10 · "stop anywhere and lose nothing" moved ABOVE the score, per spec —
      it is the sentence that makes the score read as a record rather than a
@@ -2670,7 +2969,8 @@ function renderMap(){
     +' Start anywhere, in any order, and retry anything as often as you like. '
     +'It saves after every answer, so you can stop mid-section and lose nothing. '
     +'Saved in this browser, on this device.'
-    +'<br><br><b>'+rightSc+' of '+totalSc+' questions answered correctly.</b></div>';
+    +'<br><br><b>'+rightSc+' of '+totalSc+' questions answered correctly.</b>'
+    +'<br><b>'+firstRight+' of '+totalSc+' right the first time you met them.</b></div>';
   /* P4-10 · .lvlhead deleted. Six of eight level captions were just the
      section name lowercased, printed a second time above the very button
      that already prints it — about 350px of a ~1,090px map, and enough to

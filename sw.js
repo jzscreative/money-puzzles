@@ -5,7 +5,7 @@
    visit (and a home-screen launch with no signal) still opens instantly.
    Bump CACHE on any real content change so old clients pick up the new
    build; stale caches are swept on activate. */
-const CACHE = "mp-v5-1";
+const CACHE = "mp-v5-1-260807-0740";
 const SHELL = ["./", "./index.html", "./apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
